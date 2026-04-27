@@ -7,6 +7,7 @@ import {
   resolveModelAlias,
   DEFAULT_REVIEW_MODEL
 } from "../plugins/gemini/scripts/lib/args.mjs";
+import { normalizeArgv } from "../plugins/gemini/scripts/gemini-companion.mjs";
 
 test("parseArgs handles boolean flags", () => {
   const { options, positionals } = parseArgs(["--write", "fix", "the", "bug"], {
@@ -102,4 +103,33 @@ test("DEFAULT_REVIEW_MODEL pins reviews to the latest Pro preview", () => {
   // Reviews must not silently degrade to Flash via Gemini's auto routing.
   // If this constant changes, update README and confirm intent.
   assert.equal(DEFAULT_REVIEW_MODEL, "gemini-3.1-pro-preview");
+});
+
+test("normalizeArgv passes multi-element argv through untouched", () => {
+  assert.deepEqual(
+    normalizeArgv(["--write", "fix", "the", "bug"]),
+    ["--write", "fix", "the", "bug"]
+  );
+});
+
+test("normalizeArgv splits a single multi-word $ARGUMENTS token", () => {
+  assert.deepEqual(
+    normalizeArgv(["--base main investigate the bug"]),
+    ["--base", "main", "investigate", "the", "bug"]
+  );
+});
+
+test("normalizeArgv strips quotes from a single-word quoted token", () => {
+  // Regression: the previous \s guard skipped tokenization for single-word
+  // input, leaving literal quote characters in the prompt text.
+  assert.deepEqual(normalizeArgv(['"refactor"']), ["refactor"]);
+  assert.deepEqual(normalizeArgv(["'refactor'"]), ["refactor"]);
+});
+
+test("normalizeArgv leaves bare single-word tokens unchanged", () => {
+  assert.deepEqual(normalizeArgv(["refactor"]), ["refactor"]);
+});
+
+test("normalizeArgv returns empty array for empty argv", () => {
+  assert.deepEqual(normalizeArgv([]), []);
 });

@@ -3,6 +3,7 @@
 // Single dispatcher for the gemini plugin's four subcommands.
 
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 import {
   parseArgs,
@@ -58,10 +59,12 @@ async function main() {
   }
 }
 
-// Claude Code passes "$ARGUMENTS" as a single quoted token. If we got
-// exactly one positional and it contains whitespace, split it.
-function normalizeArgv(rest) {
-  if (rest.length === 1 && /\s/.test(rest[0])) {
+// Claude Code passes "$ARGUMENTS" as a single quoted token. Always run the
+// tokenizer on a single-element argv: it handles already-split tokens
+// idempotently (`refactor` → `["refactor"]`) and also strips literal quote
+// characters that the shell preserved (`"refactor"` → `["refactor"]`).
+export function normalizeArgv(rest) {
+  if (rest.length === 1) {
     return splitRawArgumentString(rest[0]);
   }
   return rest;
@@ -165,7 +168,13 @@ async function runTask(rest) {
   }
 }
 
-main().catch((error) => {
-  process.stdout.write(renderError(error) + "\n");
-  process.exit(1);
-});
+// Only run main() when this file is the entry point. Without this guard,
+// importing it from tests or other tooling re-runs the CLI dispatcher and
+// exits the host process before the import completes.
+const invokedAsCli = process.argv[1] && process.argv[1] === fileURLToPath(import.meta.url);
+if (invokedAsCli) {
+  main().catch((error) => {
+    process.stdout.write(renderError(error) + "\n");
+    process.exit(1);
+  });
+}
