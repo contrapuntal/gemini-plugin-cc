@@ -98,8 +98,8 @@ test("resolveModelAlias returns null for falsy input", () => {
   assert.equal(resolveModelAlias(""), null);
 });
 
-test("DEFAULT_REVIEW_MODEL pins reviews to Pro", () => {
+test("DEFAULT_REVIEW_MODEL pins reviews to the latest Pro preview", () => {
   // Reviews must not silently degrade to Flash via Gemini's auto routing.
   // If this constant changes, update README and confirm intent.
-  assert.equal(DEFAULT_REVIEW_MODEL, "gemini-2.5-pro");
+  assert.equal(DEFAULT_REVIEW_MODEL, "gemini-3.1-pro-preview");
 });

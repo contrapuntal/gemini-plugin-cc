@@ -141,6 +141,6 @@ export function resolveModelAlias(model) {
 
 // Reviews are high-value-per-call and benefit from depth. Gemini CLI's
 // "auto" routing can drop a long review prompt onto Flash, which produces
-// shallower findings than Pro on the same input. Pin reviews to Pro so the
-// quality is predictable; users can still override with --model.
-export const DEFAULT_REVIEW_MODEL = "gemini-2.5-pro";
+// shallower findings on the same input. Pin reviews to the latest Pro
+// preview so the quality is predictable; users can still override with --model.
+export const DEFAULT_REVIEW_MODEL = "gemini-3.1-pro-preview";
