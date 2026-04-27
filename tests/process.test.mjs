@@ -1,0 +1,64 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+
+import {
+  runCommand,
+  DEFAULT_MAX_BUFFER,
+  streamCommand
+} from "../plugins/gemini/scripts/lib/process.mjs";
+
+test("DEFAULT_MAX_BUFFER is large enough for branch-scale diffs", () => {
+  // Node's default is 1MB, which is too small for realistic git diffs.
+  // 32MB is the floor we need; we ship 64MB for headroom.
+  assert.ok(
+    DEFAULT_MAX_BUFFER >= 32 * 1024 * 1024,
+    `expected DEFAULT_MAX_BUFFER >= 32MB, got ${DEFAULT_MAX_BUFFER}`
+  );
+});
+
+test("runCommand handles output larger than Node's default 1MB buffer", () => {
+  // Synthesize ~2MB of stdout via a single shell command. With the old
+  // code (no maxBuffer), this throws ENOBUFS.
+  const result = runCommand("node", [
+    "-e",
+    "process.stdout.write('x'.repeat(2 * 1024 * 1024))"
+  ]);
+  assert.equal(result.error, null);
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout.length, 2 * 1024 * 1024);
+});
+
+test("streamCommand returns nonzero status when child is signaled", async () => {
+  // Spawn a node process that ignores SIGTERM-via-handler is awkward; instead
+  // we use a trap-free child that exits via signal: a sleep we kill.
+  const child = spawnSync("node", [
+    "-e",
+    `
+      const { spawn } = require('node:child_process');
+      const c = spawn('node', ['-e', 'setInterval(()=>{}, 1000)']);
+      setTimeout(() => c.kill('SIGTERM'), 50);
+      c.on('close', (code, signal) => {
+        process.stdout.write(JSON.stringify({ code, signal }));
+      });
+    `
+  ]);
+  // Sanity: the inner spawn died from signal — confirms our test premise.
+  const inner = JSON.parse(child.stdout.toString());
+  assert.equal(inner.code, null);
+  assert.equal(inner.signal, "SIGTERM");
+
+  // Now exercise streamCommand with the same shape. We spawn a child that
+  // we kill from within itself by raising SIGTERM — guarantees the close
+  // event carries a signal.
+  const result = await streamCommand("node", [
+    "-e",
+    "process.kill(process.pid, 'SIGTERM'); setInterval(()=>{}, 1000)"
+  ]);
+  assert.notEqual(
+    result.status,
+    0,
+    `signaled exits must surface as non-zero, got ${JSON.stringify(result)}`
+  );
+  assert.ok(result.signal, "signal name must be reported");
+});

@@ -1,6 +1,52 @@
 // Trimmed git helpers. Adapted from codex-plugin-cc (Apache-2.0).
 
+import fs from "node:fs";
+import path from "node:path";
+
 import { runCommand, runCommandChecked, formatCommandFailure } from "./process.mjs";
+
+// Cap each untracked file's inlined body. Larger files get listed by path
+// only, so a stray multi-megabyte log or generated artifact cannot blow up
+// the prompt size or push past Gemini's input limit.
+const MAX_UNTRACKED_BYTES = 24 * 1024;
+
+function isProbablyText(buffer) {
+  const sample = buffer.subarray(0, Math.min(buffer.length, 4096));
+  for (const value of sample) {
+    if (value === 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function formatUntrackedFile(cwd, relativePath) {
+  const absolutePath = path.join(cwd, relativePath);
+  let stat;
+  try {
+    stat = fs.statSync(absolutePath);
+  } catch {
+    return `### ${relativePath}\n(skipped: broken symlink or unreadable file)`;
+  }
+  if (stat.isDirectory()) {
+    return `### ${relativePath}\n(skipped: directory)`;
+  }
+  if (stat.size > MAX_UNTRACKED_BYTES) {
+    return `### ${relativePath}\n(skipped: ${stat.size} bytes exceeds ${MAX_UNTRACKED_BYTES} byte limit)`;
+  }
+
+  let buffer;
+  try {
+    buffer = fs.readFileSync(absolutePath);
+  } catch {
+    return `### ${relativePath}\n(skipped: broken symlink or unreadable file)`;
+  }
+  if (!isProbablyText(buffer)) {
+    return `### ${relativePath}\n(skipped: binary file)`;
+  }
+
+  return `### ${relativePath}\n\`\`\`\n${buffer.toString("utf8").trimEnd()}\n\`\`\``;
+}
 
 function git(cwd, args, options = {}) {
   return runCommand("git", args, { cwd, ...options });
@@ -97,12 +143,13 @@ export function collectReviewContext(cwd, target) {
     const status = gitChecked(repoRoot, ["status", "--short", "--untracked-files=all"]).stdout;
     const stagedDiff = gitChecked(repoRoot, ["diff", "--cached", "--no-ext-diff", "--submodule=diff"]).stdout;
     const unstagedDiff = gitChecked(repoRoot, ["diff", "--no-ext-diff", "--submodule=diff"]).stdout;
+    const untrackedBody = state.untracked.map((file) => formatUntrackedFile(repoRoot, file)).join("\n\n");
 
     const content = [
       section("Git Status", status),
       section("Staged Diff", stagedDiff),
       section("Unstaged Diff", unstagedDiff),
-      section("Untracked Files", state.untracked.join("\n"))
+      section("Untracked Files", untrackedBody)
     ].join("\n");
 
     const summary = `Reviewing ${state.staged.length} staged, ${state.unstaged.length} unstaged, and ${state.untracked.length} untracked file(s) on branch ${branch}.`;

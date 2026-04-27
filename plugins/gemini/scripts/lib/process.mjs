@@ -3,13 +3,18 @@
 import { spawnSync, spawn } from "node:child_process";
 import process from "node:process";
 
+// Node's spawnSync default maxBuffer is 1MB. Real-world git diffs across a
+// branch easily exceed that, throwing ENOBUFS before review can run. 64MB
+// gives room for directory-scale reviews without pulling in streaming I/O.
+export const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
+
 export function runCommand(command, args = [], options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
     env: options.env,
     encoding: "utf8",
     input: options.input,
-    maxBuffer: options.maxBuffer,
+    maxBuffer: options.maxBuffer ?? DEFAULT_MAX_BUFFER,
     stdio: options.stdio ?? "pipe",
     shell: process.platform === "win32" ? (process.env.SHELL || true) : false,
     windowsHide: true
@@ -72,6 +77,10 @@ export function formatCommandFailure(result) {
 // Stream a child process's stdout/stderr to this process's stdio while
 // also returning the exit code. Used for invoking gemini so the user sees
 // output as it arrives instead of buffered until completion.
+//
+// A signaled exit (SIGTERM, SIGKILL, etc.) reports code === null from Node;
+// we surface that as a non-zero status so callers cannot mistake an
+// interrupted run for a successful one.
 export function streamCommand(command, args = [], options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -82,7 +91,19 @@ export function streamCommand(command, args = [], options = {}) {
     });
     child.on("error", reject);
     child.on("close", (code, signal) => {
-      resolve({ status: code ?? 0, signal: signal ?? null });
+      if (signal) {
+        resolve({ status: 128 + signalNumber(signal), signal });
+        return;
+      }
+      resolve({ status: code ?? 0, signal: null });
     });
   });
+}
+
+function signalNumber(signal) {
+  // Standard shell convention: status = 128 + signal number. We don't need
+  // the exact mapping for every platform; pick a stable nonzero default
+  // (15 = SIGTERM) when the name isn't a known number we want to encode.
+  const known = { SIGINT: 2, SIGKILL: 9, SIGTERM: 15, SIGPIPE: 13, SIGHUP: 1, SIGQUIT: 3 };
+  return known[signal] ?? 15;
 }

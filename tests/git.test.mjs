@@ -114,16 +114,45 @@ test("collectReviewContext reports empty when working tree is clean and no base"
   }
 });
 
-test("collectReviewContext returns content for dirty working tree", () => {
+test("collectReviewContext inlines untracked file contents", () => {
   const dir = makeTempRepo();
   try {
-    fs.writeFileSync(path.join(dir, "feature.js"), "export const x = 1;\n");
+    fs.writeFileSync(path.join(dir, "feature.js"), "export const SECRET_MARKER_42 = 1;\n");
     const target = resolveReviewTarget(dir);
     const context = collectReviewContext(dir, target);
     assert.equal(context.isEmpty, false);
     assert.match(context.content, /Untracked Files/);
     assert.match(context.content, /feature\.js/);
+    // Regression: the body, not just the path, must reach Gemini.
+    assert.match(context.content, /SECRET_MARKER_42/);
     assert.match(context.summary, /1 untracked/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("collectReviewContext skips binary untracked files but lists them", () => {
+  const dir = makeTempRepo();
+  try {
+    fs.writeFileSync(path.join(dir, "blob.bin"), Buffer.from([0, 1, 2, 0, 3, 4]));
+    const target = resolveReviewTarget(dir);
+    const context = collectReviewContext(dir, target);
+    assert.match(context.content, /blob\.bin/);
+    assert.match(context.content, /skipped: binary file/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("collectReviewContext skips oversized untracked files", () => {
+  const dir = makeTempRepo();
+  try {
+    // 64KB > 24KB cap
+    fs.writeFileSync(path.join(dir, "big.txt"), "a".repeat(64 * 1024));
+    const target = resolveReviewTarget(dir);
+    const context = collectReviewContext(dir, target);
+    assert.match(context.content, /big\.txt/);
+    assert.match(context.content, /skipped: \d+ bytes exceeds/);
   } finally {
     cleanup(dir);
   }
