@@ -1,0 +1,172 @@
+# Gemini plugin for Claude Code
+
+Use Gemini from inside Claude Code for code reviews or to delegate tasks to Gemini.
+
+This plugin is for Claude Code users who want an easy way to start using Gemini from the workflow they already have. It is modeled after [codex-plugin-cc](https://github.com/openai/codex-plugin-cc), trimmed to fit Gemini CLI's actual runtime model.
+
+## What You Get
+
+- `/gemini:review` for a normal read-only Gemini review
+- `/gemini:adversarial-review` for a steerable challenge review
+- `/gemini:rescue` to delegate tasks to Gemini through the `gemini:gemini-rescue` subagent
+- `/gemini:setup` to verify the local Gemini CLI is installed and authenticated
+
+## Requirements
+
+- **Google account (free tier available) or `GEMINI_API_KEY`.**
+- **Node.js 18.18 or later**
+
+## Install
+
+Add the marketplace in Claude Code:
+
+```bash
+/plugin marketplace add <your-org>/gemini-plugin-cc
+```
+
+Install the plugin:
+
+```bash
+/plugin install gemini@google-gemini
+```
+
+Reload plugins:
+
+```bash
+/reload-plugins
+```
+
+Then run:
+
+```bash
+/gemini:setup
+```
+
+`/gemini:setup` will tell you whether Gemini is ready. If Gemini is missing and npm is available, it can offer to install it for you.
+
+If you prefer to install Gemini yourself:
+
+```bash
+npm install -g @google/gemini-cli
+```
+
+If Gemini is installed but not signed in:
+
+```bash
+!gemini
+```
+
+Sign in with your Google account inside the interactive REPL (or set `GEMINI_API_KEY` in your environment), then exit.
+
+After install, you should see:
+
+- the slash commands listed below
+- the `gemini:gemini-rescue` subagent in `/agents`
+
+## Usage
+
+### `/gemini:review`
+
+Runs a normal Gemini review on your current work. Output is markdown organized by severity (Critical / High / Medium / Nits).
+
+> [!NOTE]
+> Multi-file reviews can take a while. Background mode is recommended for anything larger than ~2 files.
+
+Use it when you want:
+
+- a review of your current uncommitted changes
+- a review of your branch compared to a base branch like `main`
+
+Use `--base <ref>` for branch review. Also supports `--wait` and `--background`. Read-only and not steerable. Use [`/gemini:adversarial-review`](#geminiadversarial-review) when you want to challenge a specific decision or risk area.
+
+```bash
+/gemini:review
+/gemini:review --base main
+/gemini:review --background
+```
+
+This command never edits files.
+
+### `/gemini:adversarial-review`
+
+A **steerable** review that questions the chosen implementation and design. Uses the same review-target selection as `/gemini:review`.
+
+It supports `--base <ref>`, `--wait`, `--background`, and free-form focus text after the flags.
+
+```bash
+/gemini:adversarial-review
+/gemini:adversarial-review --base main challenge whether this caching design is right
+/gemini:adversarial-review --background look for race conditions in the retry logic
+```
+
+This command never edits files.
+
+### `/gemini:rescue`
+
+Hands a task to Gemini through the `gemini:gemini-rescue` subagent. Read-only by default — Gemini analyzes and proposes; Claude or you apply the change. Pass `--write` to let Gemini edit files directly via Gemini's `--yolo` mode.
+
+Use it when you want Gemini to:
+
+- analyze a large diff or codebase region (Gemini's 1M-token context shines here)
+- give a second opinion on an approach Claude proposed
+- investigate a bug or run an analysis pass
+
+```bash
+/gemini:rescue investigate why the build is failing in CI
+/gemini:rescue --model pro analyze the entire src/ directory for race conditions
+/gemini:rescue --write fix the failing test with the smallest safe patch
+/gemini:rescue --background trace every caller of this function across the repo
+```
+
+You can also just ask:
+
+```text
+Ask Gemini to walk through the auth middleware and find anything that breaks under partial failure.
+```
+
+**Notes:**
+- Read-only is the default. Add `--write` to let Gemini edit.
+- Model aliases: `pro` → `gemini-2.5-pro`, `flash` → `gemini-2.5-flash`.
+- `--background` runs the rescue as a Claude Code background bash task; output appears in chat when Gemini finishes.
+
+### `/gemini:setup`
+
+Checks whether Gemini is installed and authenticated. If Gemini is missing and `npm` is available, it can offer to install it.
+
+```bash
+/gemini:setup
+```
+
+## How it works
+
+The plugin invokes Gemini in non-interactive mode (`gemini --prompt "..."`) using a fixed approval mode:
+
+- **Read-only paths** (`/gemini:review`, `/gemini:adversarial-review`, `/gemini:rescue` without `--write`) use `--approval-mode plan` so the run can never hang on an interactive approval prompt and Gemini cannot modify the workspace.
+- **Write path** (`/gemini:rescue --write`) uses `--approval-mode yolo` (equivalent to `--yolo`). Gemini auto-approves all tools, including shell commands.
+
+The plugin is **stateless** — no transcripts, no PID files, no session resume. Every invocation is a one-shot Gemini call. This matches Gemini CLI's actual non-interactive shape and keeps the plugin small.
+
+## What's not included (and why)
+
+These pieces from codex-plugin-cc were intentionally left out of v1:
+
+| Codex feature | Why dropped |
+|---------------|-------------|
+| `/codex:status`, `/codex:result`, `/codex:cancel` | Gemini CLI has no app-server / job-control protocol. Claude Code's native `run_in_background: true` handles backgrounding. |
+| `--resume` / `--fresh` | Gemini's non-interactive mode has no session-resume RPC. The interactive REPL has `/chat resume` for users who need it. |
+| Stop-hook review gate | Footgun (cost, loops). May be added in v1.x once the core flow is validated. |
+| JSON-schema review output | Gemini's plain-text mode makes JSON parsing brittle. Markdown sections degrade gracefully. |
+
+See `docs/plans/2026-04-26-gemini-plugin-cc-design.md` for the full rationale.
+
+## Testing
+
+```bash
+npm test
+```
+
+Runs unit tests against arg parsing, prompt assembly, git helpers, and rendering. Tests do not invoke the real `gemini` binary.
+
+## License
+
+Apache-2.0. Adapted from codex-plugin-cc (also Apache-2.0); see `NOTICE`.

@@ -1,0 +1,12 @@
+node_modules/
+*.log
+.DS_Store
+**/.DS_Store
+.env
+.env.*
+!.env.example
+*.tgz
+coverage/
+.nyc_output
+.npm
+*.tsbuildinfo
