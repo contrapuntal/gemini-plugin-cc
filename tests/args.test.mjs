@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import {
   parseArgs,
   splitRawArgumentString,
-  resolveModelAlias
+  resolveModelAlias,
+  DEFAULT_REVIEW_MODEL
 } from "../plugins/gemini/scripts/lib/args.mjs";
 
 test("parseArgs handles boolean flags", () => {
@@ -95,4 +96,10 @@ test("resolveModelAlias returns null for falsy input", () => {
   assert.equal(resolveModelAlias(null), null);
   assert.equal(resolveModelAlias(undefined), null);
   assert.equal(resolveModelAlias(""), null);
+});
+
+test("DEFAULT_REVIEW_MODEL pins reviews to Pro", () => {
+  // Reviews must not silently degrade to Flash via Gemini's auto routing.
+  // If this constant changes, update README and confirm intent.
+  assert.equal(DEFAULT_REVIEW_MODEL, "gemini-2.5-pro");
 });

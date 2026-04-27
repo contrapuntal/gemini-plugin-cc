@@ -144,6 +144,11 @@ The plugin invokes Gemini in non-interactive mode (`gemini --prompt "..."`) usin
 - **Read-only paths** (`/gemini:review`, `/gemini:adversarial-review`, `/gemini:rescue` without `--write`) use `--approval-mode plan` so the run can never hang on an interactive approval prompt and Gemini cannot modify the workspace.
 - **Write path** (`/gemini:rescue --write`) uses `--approval-mode yolo` (equivalent to `--yolo`). Gemini auto-approves all tools, including shell commands.
 
+### Model selection
+
+- **`/gemini:review` and `/gemini:adversarial-review`** default to **`gemini-2.5-pro`**. Gemini CLI's "auto" routing can drop a long review prompt onto Flash, which produces noticeably shallower findings on the same input. Pinning reviews to Pro keeps quality predictable. Override with `--model flash` (or any model name) when you want something else.
+- **`/gemini:rescue`** does **not** force a default. It respects whatever model your Gemini CLI config picks, including auto. Pass `--model pro` (or `--model <name>`) per-call when you want explicit control.
+
 The plugin is **stateless** — no transcripts, no PID files, no session resume. Every invocation is a one-shot Gemini call. This matches Gemini CLI's actual non-interactive shape and keeps the plugin small.
 
 ## What's not included (and why)

@@ -4,7 +4,12 @@
 
 import process from "node:process";
 
-import { parseArgs, splitRawArgumentString, resolveModelAlias } from "./lib/args.mjs";
+import {
+  parseArgs,
+  splitRawArgumentString,
+  resolveModelAlias,
+  DEFAULT_REVIEW_MODEL
+} from "./lib/args.mjs";
 import { resolveReviewTarget, collectReviewContext } from "./lib/git.mjs";
 import { detectGemini, detectNpm, detectAuth, invokeGemini } from "./lib/gemini.mjs";
 import { buildReviewPrompt, buildAdversarialPrompt } from "./lib/prompts.mjs";
@@ -120,7 +125,7 @@ async function runReview(rest, { mode }) {
 
   process.stdout.write(renderReviewHeader({ summary: context.summary, target, mode }));
 
-  const model = resolveModelAlias(options.model);
+  const model = resolveModelAlias(options.model) ?? DEFAULT_REVIEW_MODEL;
   const result = await invokeGemini({ prompt, model, write: false, cwd });
   if (result.status !== 0) {
     process.exit(result.status || 1);
