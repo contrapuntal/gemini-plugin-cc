@@ -168,13 +168,38 @@ These pieces from codex-plugin-cc were intentionally left out of v1:
 
 See `docs/plans/2026-04-26-gemini-plugin-cc-design.md` for the full rationale.
 
+## Use from other coding agents (Codex CLI, OpenCode, Pi.dev)
+
+The plugin's *Claude Code packaging* (`.claude-plugin/plugin.json` + `commands/*.md` + `agents/*.md`) is Claude-Code-specific and won't load in other agents.
+
+For other agents that understand the **Anthropic Skill format** (a `<name>/SKILL.md` directory), this repo ships a portable shim at `skills/gemini-helper/SKILL.md`. It documents the same companion script's interface to a model-invoked skill loader. You lose the slash-command UX, but the capability is reachable.
+
+To install:
+
+```bash
+# Set this once per shell (or in your shell rc) so the skill knows where to find the companion script.
+export GEMINI_PLUGIN_CC_ROOT="$(pwd)"
+
+# OpenCode
+ln -s "$GEMINI_PLUGIN_CC_ROOT/skills/gemini-helper" ~/.config/opencode/skills/gemini-helper
+
+# Codex CLI
+ln -s "$GEMINI_PLUGIN_CC_ROOT/skills/gemini-helper" ~/.codex/skills/gemini-helper
+
+# Pi.dev (consult its package docs for the right skills directory; or distribute as an npm package)
+```
+
+Once linked, the agent's model will load the skill on demand based on its description. Prerequisites are the same as for Claude Code: `gemini` CLI installed and authenticated, `node` 18.18+ on PATH.
+
+**Not supported:** GitHub Copilot CLI has no arbitrary skill/plugin format and cannot host this.
+
 ## Testing
 
 ```bash
 npm test
 ```
 
-Runs unit tests against arg parsing, prompt assembly, git helpers, and rendering. Tests do not invoke the real `gemini` binary.
+Runs unit tests against arg parsing, prompt assembly, git helpers, rendering, and process spawning. Tests do not invoke the real `gemini` binary.
 
 ## License
 
