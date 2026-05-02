@@ -8,6 +8,26 @@ import {
   streamCommand
 } from "../plugins/gemini/scripts/lib/process.mjs";
 
+test("runCommand returns nonzero status when child is signaled", () => {
+  // Regression: when a child is killed by signal, Node returns
+  // result.status === null. The earlier `result.status ?? 0` mapping let
+  // an interrupted git call look successful, so runCommandChecked would
+  // accept partial/empty stdout. runCommand must surface signaled exits
+  // as non-zero (128 + signal_number).
+  //
+  // Spawn a short-lived node child that signals itself and exits.
+  const result = runCommand("node", [
+    "-e",
+    "process.kill(process.pid, 'SIGTERM'); setTimeout(()=>{}, 200);"
+  ]);
+  assert.notEqual(
+    result.status,
+    0,
+    `signaled exits must surface as non-zero, got ${JSON.stringify({status: result.status, signal: result.signal})}`
+  );
+  assert.ok(result.signal, "signal name must be reported");
+});
+
 test("runCommand never invokes a shell unless explicitly requested", () => {
   // Regression: the previous implementation set shell: true on Windows,
   // which let shell metacharacters in args (branch names, refs) trigger

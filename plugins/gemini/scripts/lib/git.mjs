@@ -49,11 +49,20 @@ function formatUntrackedFile(cwd, relativePath) {
   const safePath = escapeXmlAttr(relativePath);
   const skip = (reason) => `<file path="${safePath}" skipped="${reason}"/>`;
 
+  // Use lstat (not stat) so we see the symlink itself rather than the
+  // target. fs.statSync + fs.readFileSync would silently follow a
+  // symlink like notes.txt -> ~/.ssh/id_ed25519 and ship its contents
+  // to the model. Skip symlinks entirely; the path is still listed so
+  // the reviewer knows the file exists, but no out-of-repo content
+  // crosses the boundary.
   let stat;
   try {
-    stat = fs.statSync(absolutePath);
+    stat = fs.lstatSync(absolutePath);
   } catch {
     return skip("broken-or-unreadable");
+  }
+  if (stat.isSymbolicLink()) {
+    return skip("symlink");
   }
   if (stat.isDirectory()) {
     return skip("directory");

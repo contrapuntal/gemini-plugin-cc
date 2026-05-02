@@ -26,11 +26,18 @@ export function runCommand(command, args = [], options = {}) {
     windowsHide: true
   });
 
+  // Map signaled exits to a non-zero status so runCommandChecked cannot
+  // mistake an interrupted git call for success. Otherwise a child killed
+  // by SIGTERM/SIGKILL/etc. returns status:null and our `?? 0` fallback
+  // would treat partial/empty stdout as a successful run.
+  const signal = result.signal ?? null;
+  const status = signal ? 128 + signalNumber(signal) : (result.status ?? 0);
+
   return {
     command,
     args,
-    status: result.status ?? 0,
-    signal: result.signal ?? null,
+    status,
+    signal,
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
     error: result.error ?? null

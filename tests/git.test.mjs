@@ -211,6 +211,34 @@ test("collectReviewContext sanitizes closing-tag injection in untracked content"
   }
 });
 
+test("collectReviewContext skips untracked symlinks instead of following them", () => {
+  // Regression: fs.statSync + fs.readFileSync follow symlinks. An untracked
+  // symlink to a sensitive file outside the repo (e.g. notes.txt -> ~/.ssh/...)
+  // would silently get its target's contents inlined into the prompt and
+  // shipped to Gemini. Use lstat and skip symlinks; only the path appears
+  // in the listing.
+  const dir = makeTempRepo();
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), "gemini-symlink-target-"));
+  try {
+    const sensitivePath = path.join(targetDir, "secret.txt");
+    fs.writeFileSync(sensitivePath, "OUT_OF_REPO_SECRET_DO_NOT_LEAK");
+    fs.symlinkSync(sensitivePath, path.join(dir, "notes.txt"));
+
+    const target = resolveReviewTarget(dir);
+    const context = collectReviewContext(dir, target);
+
+    // The path should appear (so the reviewer knows the symlink exists).
+    assert.match(context.content, /notes\.txt/);
+    // The skip reason should make the symlink-ness explicit.
+    assert.match(context.content, /skipped="symlink"/);
+    // The secret target's content must NOT appear in the review context.
+    assert.doesNotMatch(context.content, /OUT_OF_REPO_SECRET_DO_NOT_LEAK/);
+  } finally {
+    cleanup(dir);
+    cleanup(targetDir);
+  }
+});
+
 test("collectReviewContext output contains no zero-width or invisible characters", () => {
   // Regression: an earlier sanitizer used U+200C (zero-width non-joiner)
   // as the escape mechanism. That worked but was unreadable in source and

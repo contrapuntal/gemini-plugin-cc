@@ -151,6 +151,10 @@ The plugin invokes Gemini in non-interactive mode (`gemini --prompt "..."`) usin
 
 The plugin is **stateless** — no transcripts, no PID files, no session resume. Every invocation is a one-shot Gemini call. This matches Gemini CLI's actual non-interactive shape and keeps the plugin small.
 
+### Trust model for slash command arguments
+
+Slash command arguments (`$ARGUMENTS`) are interpolated into a Bash command string by Claude Code before being passed to the companion script. This is the standard Claude Code idiom (codex-plugin-cc and other official plugins use the identical pattern). It means **shell metacharacters in slash args are interpreted by your shell** — `/gemini:rescue $(echo hi)` will expand the command substitution before reaching the plugin. The threat model assumes slash commands are user-typed; treat them with the same care you'd apply to commands you run directly in your terminal.
+
 ## What's not included (and why)
 
 These pieces from codex-plugin-cc were intentionally left out of v1:
