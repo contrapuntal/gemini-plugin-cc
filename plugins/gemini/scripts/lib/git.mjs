@@ -20,40 +20,72 @@ function isProbablyText(buffer) {
   return true;
 }
 
+// Replace closing-tag patterns that an attacker-controlled file could use
+// to break out of the XML wrapper around its body. We replace the literal
+// closing form with a zero-width-joiner-separated variant so the text
+// is still legible to the model but no longer terminates the wrapper.
+function sanitizeForXmlWrap(content) {
+  return content
+    .replaceAll("</file>", "</‌file>")
+    .replaceAll("</repository_context>", "</‌repository_context>");
+}
+
+// Escape the path attribute. We only allow basic safe characters in the
+// raw form; anything else gets quote-escaped. The path is already a git-
+// supplied filesystem path (NUL-split), so embedded newlines are real
+// content, not separators.
+function escapeXmlAttr(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 function formatUntrackedFile(cwd, relativePath) {
   const absolutePath = path.join(cwd, relativePath);
+  const safePath = escapeXmlAttr(relativePath);
+  const skip = (reason) => `<file path="${safePath}" skipped="${reason}"/>`;
+
   let stat;
   try {
     stat = fs.statSync(absolutePath);
   } catch {
-    return `### ${relativePath}\n(skipped: broken symlink or unreadable file)`;
+    return skip("broken-or-unreadable");
   }
   if (stat.isDirectory()) {
-    return `### ${relativePath}\n(skipped: directory)`;
+    return skip("directory");
   }
   if (stat.size > MAX_UNTRACKED_BYTES) {
-    return `### ${relativePath}\n(skipped: ${stat.size} bytes exceeds ${MAX_UNTRACKED_BYTES} byte limit)`;
+    return `<file path="${safePath}" skipped="oversize" size="${stat.size}" limit="${MAX_UNTRACKED_BYTES}"/>`;
   }
 
   let buffer;
   try {
     buffer = fs.readFileSync(absolutePath);
   } catch {
-    return `### ${relativePath}\n(skipped: broken symlink or unreadable file)`;
+    return skip("broken-or-unreadable");
   }
   if (!isProbablyText(buffer)) {
-    return `### ${relativePath}\n(skipped: binary file)`;
+    return skip("binary");
   }
 
-  return `### ${relativePath}\n\`\`\`\n${buffer.toString("utf8").trimEnd()}\n\`\`\``;
+  const safeBody = sanitizeForXmlWrap(buffer.toString("utf8").trimEnd());
+  return `<file path="${safePath}">\n${safeBody}\n</file>`;
 }
 
+// `-c color.ui=never` overrides any user-level `color.ui = always`. Without
+// this, ANSI escape codes leak into the prompt context, wasting tokens and
+// confusing the model. Apply it once at the wrapper level so every git
+// command in this module is covered.
+const NO_COLOR_OPT = ["-c", "color.ui=never"];
+
 function git(cwd, args, options = {}) {
-  return runCommand("git", args, { cwd, ...options });
+  return runCommand("git", [...NO_COLOR_OPT, ...args], { cwd, ...options });
 }
 
 function gitChecked(cwd, args, options = {}) {
-  return runCommandChecked("git", args, { cwd, ...options });
+  return runCommandChecked("git", [...NO_COLOR_OPT, ...args], { cwd, ...options });
 }
 
 export function ensureGitRepository(cwd) {
@@ -99,10 +131,17 @@ export function detectDefaultBranch(cwd) {
   throw new Error("Unable to detect the default branch. Pass --base <ref>.");
 }
 
+// `-z` makes git print NUL-separated, unquoted filenames. Without it,
+// names containing newlines or special characters get backslash-quoted
+// and a naive `split("\n")` either drops them or yields invalid paths.
+function splitNul(stdout) {
+  return stdout.split("\0").filter(Boolean);
+}
+
 export function getWorkingTreeState(cwd) {
-  const staged = gitChecked(cwd, ["diff", "--cached", "--name-only"]).stdout.trim().split("\n").filter(Boolean);
-  const unstaged = gitChecked(cwd, ["diff", "--name-only"]).stdout.trim().split("\n").filter(Boolean);
-  const untracked = gitChecked(cwd, ["ls-files", "--others", "--exclude-standard"]).stdout.trim().split("\n").filter(Boolean);
+  const staged = splitNul(gitChecked(cwd, ["diff", "--cached", "--name-only", "-z"]).stdout);
+  const unstaged = splitNul(gitChecked(cwd, ["diff", "--name-only", "-z"]).stdout);
+  const untracked = splitNul(gitChecked(cwd, ["ls-files", "--others", "--exclude-standard", "-z"]).stdout);
 
   return {
     staged,
@@ -143,12 +182,14 @@ export function collectReviewContext(cwd, target) {
     const status = gitChecked(repoRoot, ["status", "--short", "--untracked-files=all"]).stdout;
     const stagedDiff = gitChecked(repoRoot, ["diff", "--cached", "--no-ext-diff", "--submodule=diff"]).stdout;
     const unstagedDiff = gitChecked(repoRoot, ["diff", "--no-ext-diff", "--submodule=diff"]).stdout;
+    // formatUntrackedFile already sanitizes per-file; the diff bodies above
+    // are sanitized below at the section-assembly boundary.
     const untrackedBody = state.untracked.map((file) => formatUntrackedFile(repoRoot, file)).join("\n\n");
 
     const content = [
-      section("Git Status", status),
-      section("Staged Diff", stagedDiff),
-      section("Unstaged Diff", unstagedDiff),
+      section("Git Status", sanitizeForXmlWrap(status)),
+      section("Staged Diff", sanitizeForXmlWrap(stagedDiff)),
+      section("Unstaged Diff", sanitizeForXmlWrap(unstagedDiff)),
       section("Untracked Files", untrackedBody)
     ].join("\n");
 
@@ -162,12 +203,12 @@ export function collectReviewContext(cwd, target) {
   const log = gitChecked(repoRoot, ["log", "--oneline", "--decorate", range]).stdout;
   const stat = gitChecked(repoRoot, ["diff", "--stat", range]).stdout;
   const diff = gitChecked(repoRoot, ["diff", "--no-ext-diff", "--submodule=diff", range]).stdout;
-  const fileCount = gitChecked(repoRoot, ["diff", "--name-only", range]).stdout.trim().split("\n").filter(Boolean).length;
+  const fileCount = splitNul(gitChecked(repoRoot, ["diff", "--name-only", "-z", range]).stdout).length;
 
   const content = [
-    section("Commit Log", log),
-    section("Diff Stat", stat),
-    section("Branch Diff", diff)
+    section("Commit Log", sanitizeForXmlWrap(log)),
+    section("Diff Stat", sanitizeForXmlWrap(stat)),
+    section("Branch Diff", sanitizeForXmlWrap(diff))
   ].join("\n");
 
   const summary = `Reviewing branch ${branch} against ${target.baseRef} (${fileCount} file(s) changed).`;

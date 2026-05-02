@@ -78,15 +78,21 @@ export function formatCommandFailure(result) {
 // also returning the exit code. Used for invoking gemini so the user sees
 // output as it arrives instead of buffered until completion.
 //
+// When `options.input` is a string, it is written to the child's stdin and
+// stdin is closed afterward. This is the route for prompt bodies that
+// would otherwise overflow the OS argv length limit (E2BIG) when passed
+// inline via `--prompt`.
+//
 // A signaled exit (SIGTERM, SIGKILL, etc.) reports code === null from Node;
 // we surface that as a non-zero status so callers cannot mistake an
 // interrupted run for a successful one.
 export function streamCommand(command, args = [], options = {}) {
+  const hasInput = typeof options.input === "string";
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
       env: options.env,
-      stdio: ["ignore", "inherit", "inherit"],
+      stdio: [hasInput ? "pipe" : "ignore", "inherit", "inherit"],
       windowsHide: true
     });
     child.on("error", reject);
@@ -97,6 +103,10 @@ export function streamCommand(command, args = [], options = {}) {
       }
       resolve({ status: code ?? 0, signal: null });
     });
+    if (hasInput) {
+      child.stdin.on("error", reject);
+      child.stdin.end(options.input);
+    }
   });
 }
 

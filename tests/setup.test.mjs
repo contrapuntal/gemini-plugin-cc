@@ -85,31 +85,32 @@ test("renderError stringifies non-Error values", () => {
   assert.equal(renderError("plain string"), "Error: plain string");
 });
 
-test("buildGeminiArgs uses plan mode for read-only", () => {
-  const args = buildGeminiArgs({ prompt: "hi" });
-  assert.deepEqual(args, ["--approval-mode", "plan", "--prompt", "hi"]);
+test("buildGeminiArgs uses plan mode for read-only with empty --prompt", () => {
+  // The actual prompt body is sent via stdin to avoid OS argv length limits;
+  // --prompt "" still triggers non-interactive mode in the gemini CLI.
+  const args = buildGeminiArgs({});
+  assert.deepEqual(args, ["--approval-mode", "plan", "--prompt", ""]);
 });
 
 test("buildGeminiArgs uses yolo mode when write is requested", () => {
-  const args = buildGeminiArgs({ prompt: "fix it", write: true });
-  assert.deepEqual(args, ["--approval-mode", "yolo", "--prompt", "fix it"]);
+  const args = buildGeminiArgs({ write: true });
+  assert.deepEqual(args, ["--approval-mode", "yolo", "--prompt", ""]);
 });
 
 test("buildGeminiArgs threads through model selection", () => {
-  const args = buildGeminiArgs({ prompt: "review", model: "gemini-2.5-pro" });
+  const args = buildGeminiArgs({ model: "gemini-2.5-pro" });
   assert.deepEqual(args, [
     "--approval-mode",
     "plan",
     "--model",
     "gemini-2.5-pro",
     "--prompt",
-    "review"
+    ""
   ]);
 });
 
 test("buildGeminiArgs combines write and model correctly", () => {
   const args = buildGeminiArgs({
-    prompt: "do it",
     model: "gemini-2.5-flash",
     write: true
   });
@@ -119,6 +120,16 @@ test("buildGeminiArgs combines write and model correctly", () => {
     "--model",
     "gemini-2.5-flash",
     "--prompt",
-    "do it"
+    ""
   ]);
+});
+
+test("buildGeminiArgs never embeds prompt content as an argv item", () => {
+  // Regression: the previous implementation passed `prompt` via --prompt,
+  // which crashed on Linux with E2BIG once the prompt exceeded ~128KB.
+  // Prompts now go via stdin; argv must not carry the body.
+  const args = buildGeminiArgs({ model: "gemini-2.5-pro", write: true });
+  for (const arg of args) {
+    assert.ok(arg.length < 256, `argv item too long, suggests prompt leaked back: ${arg.length}`);
+  }
 });

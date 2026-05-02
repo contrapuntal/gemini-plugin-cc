@@ -29,6 +29,38 @@ test("runCommand handles output larger than Node's default 1MB buffer", () => {
   assert.equal(result.stdout.length, 2 * 1024 * 1024);
 });
 
+test("streamCommand pipes options.input to child stdin", async () => {
+  // Regression for E2BIG fix: the prompt body must reach the child via
+  // stdin, not via argv. Verify by piping a marker through and having the
+  // child echo it back — the test passes only if the child actually
+  // received the input on its stdin.
+  // We can't use stdio: "inherit" here because we need to capture stdout.
+  // So instead, exercise the contract via a child that writes a marker
+  // file when it sees expected stdin content, then assert.
+  const fs = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gemini-stream-input-"));
+  const markerPath = path.join(dir, "marker.txt");
+  try {
+    const result = await streamCommand("node", [
+      "-e",
+      `
+        let buf = "";
+        process.stdin.on("data", (c) => { buf += c; });
+        process.stdin.on("end", () => {
+          require("node:fs").writeFileSync(${JSON.stringify(markerPath)}, buf);
+        });
+      `
+    ], { input: "MARKER_PAYLOAD_42" });
+    assert.equal(result.status, 0);
+    const marker = fs.readFileSync(markerPath, "utf8");
+    assert.equal(marker, "MARKER_PAYLOAD_42");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("streamCommand returns nonzero status when child is signaled", async () => {
   // Spawn a node process that ignores SIGTERM-via-handler is awkward; instead
   // we use a trap-free child that exits via signal: a sleep we kill.

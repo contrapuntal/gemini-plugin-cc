@@ -49,7 +49,13 @@ export function detectAuth() {
   return { authenticated: false };
 }
 
-export function buildGeminiArgs({ prompt, model, write }) {
+// We always pass an empty string for `--prompt` and pipe the actual prompt
+// body through stdin. This is the only safe choice: prompts can run into
+// hundreds of KB on a multi-file review, which exceeds the OS argv length
+// limit (E2BIG, ~128KB on Linux per single argument). `--prompt ""` still
+// triggers gemini's non-interactive mode; the `-p` value is concatenated
+// after stdin, so empty makes stdin the entire prompt.
+export function buildGeminiArgs({ model, write }) {
   const args = [];
   // Pick an explicit approval mode so non-interactive runs never hang on a
   // tool-approval prompt. plan = read-only; yolo = auto-approve everything.
@@ -57,15 +63,16 @@ export function buildGeminiArgs({ prompt, model, write }) {
   if (model) {
     args.push("--model", model);
   }
-  args.push("--prompt", prompt);
+  args.push("--prompt", "");
   return args;
 }
 
-// Invokes gemini, streams output to this process's stdout/stderr,
-// and resolves with the exit status.
+// Invokes gemini, streams stdout/stderr to this process's tty, and
+// resolves with the exit status. The prompt is delivered via stdin to
+// avoid OS argv length limits on large repository contexts.
 export function invokeGemini({ prompt, model, write, cwd }) {
-  const args = buildGeminiArgs({ prompt, model, write });
-  return streamCommand(GEMINI_BINARY, args, { cwd });
+  const args = buildGeminiArgs({ model, write });
+  return streamCommand(GEMINI_BINARY, args, { cwd, input: prompt });
 }
 
 export function npmInstallCommand() {
