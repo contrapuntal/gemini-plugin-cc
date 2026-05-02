@@ -16,7 +16,13 @@ export function runCommand(command, args = [], options = {}) {
     input: options.input,
     maxBuffer: options.maxBuffer ?? DEFAULT_MAX_BUFFER,
     stdio: options.stdio ?? "pipe",
-    shell: process.platform === "win32" ? (process.env.SHELL || true) : false,
+    // Always shell:false. With shell:true on Windows, args containing
+    // metacharacters (`&`, `|`, `;`, etc.) get interpreted by cmd.exe,
+    // creating a command-injection vector when refs or user-supplied
+    // arguments flow through. Node's spawn finds .exe binaries on PATH
+    // without a shell on Windows; for `.cmd`/`.bat` wrappers a caller
+    // can opt in via options.shell.
+    shell: options.shell ?? false,
     windowsHide: true
   });
 

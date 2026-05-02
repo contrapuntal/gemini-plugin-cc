@@ -21,13 +21,15 @@ function isProbablyText(buffer) {
 }
 
 // Replace closing-tag patterns that an attacker-controlled file could use
-// to break out of the XML wrapper around its body. We replace the literal
-// closing form with a zero-width-joiner-separated variant so the text
-// is still legible to the model but no longer terminates the wrapper.
+// to break out of the XML wrapper around its body. We use HTML-entity
+// encoding rather than invisible Unicode (zero-width-joiner) for two
+// reasons: entity encoding survives any text editor or diff viewer
+// without confusion, and the model unambiguously reads the result as
+// quoted/escaped text instead of a real closing tag.
 function sanitizeForXmlWrap(content) {
   return content
-    .replaceAll("</file>", "</‌file>")
-    .replaceAll("</repository_context>", "</‌repository_context>");
+    .replaceAll("</file>", "&lt;/file&gt;")
+    .replaceAll("</repository_context>", "&lt;/repository_context&gt;");
 }
 
 // Escape the path attribute. We only allow basic safe characters in the

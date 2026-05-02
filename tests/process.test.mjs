@@ -8,6 +8,24 @@ import {
   streamCommand
 } from "../plugins/gemini/scripts/lib/process.mjs";
 
+test("runCommand never invokes a shell unless explicitly requested", () => {
+  // Regression: the previous implementation set shell: true on Windows,
+  // which let shell metacharacters in args (branch names, refs) trigger
+  // cmd.exe interpretation and command injection. shell:false is the
+  // safe default; callers can override per-invocation.
+  //
+  // Verify the contract by trying to run a command that would only succeed
+  // through a shell (using a shell-builtin echo expansion). Without shell,
+  // the literal `$HOME` or `&&` doesn't get interpreted.
+  const result = runCommand("node", ["-e", "console.log(process.argv[1])", "$HOME&&touch /tmp/INJ"]);
+  assert.equal(result.status, 0);
+  // The literal arg comes through unprocessed -- not interpreted as a
+  // shell expansion, not chained with `&&`. (If a shell were involved,
+  // `node -e ... $HOME && touch /tmp/INJ` would either expand $HOME or
+  // chain a command.)
+  assert.match(result.stdout, /\$HOME&&touch \/tmp\/INJ/);
+});
+
 test("DEFAULT_MAX_BUFFER is large enough for branch-scale diffs", () => {
   // Node's default is 1MB, which is too small for realistic git diffs.
   // 32MB is the floor we need; we ship 64MB for headroom.
