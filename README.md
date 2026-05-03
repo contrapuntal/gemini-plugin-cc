@@ -21,7 +21,7 @@ This plugin lets Claude Code users reach Gemini without leaving their workflow. 
 Add the marketplace in Claude Code:
 
 ```bash
-/plugin marketplace add <your-org>/gemini-plugin-cc
+/plugin marketplace add contrapuntal/gemini-plugin-cc
 ```
 
 Install the plugin:
