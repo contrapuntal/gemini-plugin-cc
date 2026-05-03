@@ -18,6 +18,7 @@ This skill lets any Anthropic-Skill-aware agent (Codex CLI, OpenCode, Pi.dev, pl
 - **`gemini` CLI installed and authenticated.** Install with `npm install -g @google/gemini-cli`. Sign in via `gemini` (interactive) and complete Google sign-in, or set `GEMINI_API_KEY` / `GOOGLE_API_KEY` in the environment.
 - **`node` 18.18 or later** on PATH.
 - **`GEMINI_PLUGIN_CC_ROOT` env var** pointing at the absolute path of the cloned `gemini-plugin-cc` repository. If that variable is unset, ask the user for the path before running the companion.
+- **`GEMINI_CLI_TRUST_WORKSPACE=true`** when invoking from a directory Gemini hasn't been interactively trusted in. Without this, headless Gemini overrides `--approval-mode plan` to `default` and refuses to proceed. Export it for the session, or prepend it to every companion invocation.
 
 ## When to invoke this skill
 
@@ -32,13 +33,16 @@ Do **not** trigger when the user only wants Claude's own review or when the task
 
 ## Invocations
 
-All commands assume the working directory is the repo being reviewed/analyzed.
+All commands assume the working directory is the repo being reviewed/analyzed. If you have not exported `GEMINI_CLI_TRUST_WORKSPACE=true` for the session, prepend it to each command — Gemini's headless mode will refuse to run otherwise.
 
 ### Code review (read-only, structured markdown output)
 
 ```bash
-node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" review
-node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" review --base main
+GEMINI_CLI_TRUST_WORKSPACE=true \
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" review
+
+GEMINI_CLI_TRUST_WORKSPACE=true \
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" review --base main
 ```
 
 The output is markdown with a fixed skeleton: `## Summary` then `### Critical / High / Medium / Nits` sections. Stream it back to the user verbatim.
@@ -46,7 +50,8 @@ The output is markdown with a fixed skeleton: `## Summary` then `### Critical / 
 ### Adversarial review (read-only, steerable, accepts focus text)
 
 ```bash
-node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" adversarial-review "look for race conditions in the retry path"
+GEMINI_CLI_TRUST_WORKSPACE=true \
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" adversarial-review "look for race conditions in the retry path"
 ```
 
 Same output shape; framing is "find reasons this should not ship" rather than general review.
@@ -55,10 +60,12 @@ Same output shape; framing is "find reasons this should not ship" rather than ge
 
 ```bash
 # Read-only: Gemini analyzes and proposes; the host agent or user applies any change.
-node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" task "investigate why the build is failing in CI"
+GEMINI_CLI_TRUST_WORKSPACE=true \
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" task "investigate why the build is failing in CI"
 
 # Write: Gemini may edit files directly via --yolo. Use only when the user explicitly asked for write-capable execution.
-node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" task --write "fix the failing test with the smallest safe patch"
+GEMINI_CLI_TRUST_WORKSPACE=true \
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" task --write "fix the failing test with the smallest safe patch"
 ```
 
 ### Setup probe (verify install + auth)
@@ -67,6 +74,8 @@ node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" task -
 node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" setup
 node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" setup --json
 ```
+
+> Note for Codex CLI users: when Gemini is configured for OAuth (not `GEMINI_API_KEY`), the live review call may stall on `Opening authentication page in your browser. Do you want to continue? [Y/n]:` even though the setup probe reports `authenticated: true`. The setup probe only checks for the credential file; Gemini's headless API call appears to refresh its OAuth token and falls back to interactive browser auth, which Codex's process isolation cannot complete. **Workaround: set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) for the Codex session**. Granting `disk-full-read-access` does not fix this — the credential file is already readable.
 
 If the result reports `installed: false`, suggest `npm install -g @google/gemini-cli`. If `authenticated: false`, suggest running `gemini` interactively to sign in.
 

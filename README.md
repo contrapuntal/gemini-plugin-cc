@@ -177,8 +177,11 @@ For agents that understand the **Anthropic Skill format** (a `<name>/SKILL.md` d
 To install:
 
 ```bash
-# Set this once per shell (or in your shell rc) so the skill knows where to find the companion script.
+# Set these once per shell (or in your shell rc).
+# GEMINI_PLUGIN_CC_ROOT lets the skill find the companion script.
+# GEMINI_CLI_TRUST_WORKSPACE keeps headless Gemini from refusing to run in untrusted dirs.
 export GEMINI_PLUGIN_CC_ROOT="$(pwd)"
+export GEMINI_CLI_TRUST_WORKSPACE=true
 
 # OpenCode
 ln -s "$GEMINI_PLUGIN_CC_ROOT/skills/gemini-helper" ~/.config/opencode/skills/gemini-helper
@@ -188,6 +191,8 @@ ln -s "$GEMINI_PLUGIN_CC_ROOT/skills/gemini-helper" ~/.codex/skills/gemini-helpe
 
 # Pi.dev (consult its package docs for the right skills directory; or distribute as an npm package)
 ```
+
+When invoking the host agent, prefer non-interactive modes that auto-approve shell commands (Pi: `--print`, OpenCode: `opencode run`, Codex CLI: `codex exec -s workspace-write`). For Codex CLI specifically, **set `GEMINI_API_KEY` for the session** if Gemini is configured for OAuth — Codex's process isolation prevents Gemini's headless OAuth token refresh from completing the browser handoff, even though the setup probe reports `authenticated: true`. The API key bypasses OAuth entirely.
 
 Once linked, the agent's model loads the skill on demand based on its description. Prerequisites match Claude Code: `gemini` CLI installed and authenticated, `node` 18.18+ on PATH.
 
