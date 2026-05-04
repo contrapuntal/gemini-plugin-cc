@@ -168,13 +168,24 @@ These pieces from codex-plugin-cc are deliberately left out of v1:
 
 For the full rationale, see `docs/plans/2026-04-26-gemini-plugin-cc-design.md`.
 
-## Use from other coding agents (Codex CLI, OpenCode, Pi.dev)
+## Use from other coding agents (Codex CLI, OpenCode, Pi.dev, Copilot CLI)
 
-The plugin's *Claude Code packaging* (`.claude-plugin/plugin.json` + `commands/*.md` + `agents/*.md`) is Claude-Code-specific and will not load in other agents.
+The plugin's *Claude Code packaging* (`commands/*.md` + `agents/*.md`) drives the slash-command UX and will not load in other agents. For everything else, this repo ships:
 
-For agents that understand the **Anthropic Skill format** (a `<name>/SKILL.md` directory), this repo ships a portable shim at `skills/gemini-helper/SKILL.md`. It exposes the same companion script's interface to a model-invoked skill loader. You lose the slash-command UX, but the capability remains reachable.
+- `skills/gemini-helper/SKILL.md` — Anthropic Skill format, discoverable by Codex CLI, OpenCode, Pi.dev, and Copilot CLI's skill loader
+- `.plugin/plugin.json` — Copilot CLI's expected manifest at the repo root, pointing at the same `./skills/`
 
-To install:
+You lose the slash-command UX in these agents, but the capability remains reachable as a model-invoked skill.
+
+### Copilot CLI
+
+```bash
+copilot plugin install contrapuntal/gemini-plugin-cc
+```
+
+The plugin's `agents/gemini-rescue.md` also loads as a Copilot agent automatically.
+
+### Codex CLI, OpenCode, Pi.dev — symlink install
 
 ```bash
 # Set these once per shell (or in your shell rc).
@@ -192,7 +203,7 @@ ln -s "$GEMINI_PLUGIN_CC_ROOT/skills/gemini-helper" ~/.codex/skills/gemini-helpe
 # Pi.dev (consult its package docs for the right skills directory; or distribute as an npm package)
 ```
 
-When invoking the host agent, prefer non-interactive modes that auto-approve shell commands (Pi: `--print`, OpenCode: `opencode run`, Codex CLI: `codex exec -s workspace-write`). For Codex CLI with Gemini OAuth, also grant the sandbox network access and write access to Gemini's credential directory so headless OAuth-token rotation can complete:
+When invoking the host agent, prefer non-interactive modes that auto-approve shell commands (Pi: `--print`, OpenCode: `opencode run`, Codex CLI: `codex exec -s workspace-write`, Copilot CLI: `copilot --allow-all-tools -p "..."`). For Codex CLI with Gemini OAuth, also grant the sandbox network access and write access to Gemini's credential directory so headless OAuth-token rotation can complete:
 
 ```bash
 codex exec -s workspace-write \
@@ -206,7 +217,6 @@ Without both, Codex's sandbox blocks Gemini's token refresh and the call falls b
 
 Once linked, the agent's model loads the skill on demand based on its description. Prerequisites match Claude Code: `gemini` CLI installed and authenticated, `node` 18.18+ on PATH.
 
-**Not supported:** GitHub Copilot CLI has no arbitrary skill/plugin format and cannot host this.
 
 ## Testing
 

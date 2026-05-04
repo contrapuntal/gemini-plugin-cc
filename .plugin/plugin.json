@@ -1,0 +1,13 @@
+{
+  "name": "gemini-plugin-cc",
+  "displayName": "Gemini Helper",
+  "description": "Run Gemini from inside Copilot CLI for code reviews and delegated tasks. Wraps the gemini-plugin-cc companion script.",
+  "version": "1.0.0",
+  "author": {
+    "name": "gemini-plugin-cc contributors"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/contrapuntal/gemini-plugin-cc",
+  "repository": "https://github.com/contrapuntal/gemini-plugin-cc",
+  "skills": "./skills/"
+}
