@@ -75,7 +75,17 @@ node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" setup
 node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" setup --json
 ```
 
-> Note for Codex CLI users: when Gemini is configured for OAuth (not `GEMINI_API_KEY`), the live review call may stall on `Opening authentication page in your browser. Do you want to continue? [Y/n]:` even though the setup probe reports `authenticated: true`. The setup probe only checks for the credential file; Gemini's headless API call appears to refresh its OAuth token and falls back to interactive browser auth, which Codex's process isolation cannot complete. **Workaround: set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) for the Codex session**. Granting `disk-full-read-access` does not fix this — the credential file is already readable.
+> Note for Codex CLI users with Gemini OAuth (not `GEMINI_API_KEY`): the live review call may stall on `Opening authentication page in your browser. Do you want to continue? [Y/n]:` even though the setup probe reports `authenticated: true`. Two sandbox restrictions cause this — Codex's `workspace-write` mode (1) blocks outbound network, so Gemini's OAuth-token refresh HTTP request fails, and (2) blocks writes outside the workspace, so Gemini cannot persist the rotated token to `~/.gemini/oauth_creds.json`. Either failure makes Gemini fall back to interactive browser auth, which Codex's process isolation cannot complete. **Both** must be granted:
+>
+> ```bash
+> codex exec -s workspace-write \
+>   -c 'sandbox_workspace_write.writable_roots=["/Users/<you>/.gemini"]' \
+>   -c 'sandbox_workspace_write.network_access=true' \
+>   --skip-git-repo-check \
+>   "your prompt that triggers gemini-helper"
+> ```
+>
+> The misleading part: the error reads `FatalCancellationError: Authentication cancelled by user`. The user did not cancel; the sandbox blocked the refresh.
 
 If the result reports `installed: false`, suggest `npm install -g @google/gemini-cli`. If `authenticated: false`, suggest running `gemini` interactively to sign in.
 

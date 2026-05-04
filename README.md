@@ -192,7 +192,17 @@ ln -s "$GEMINI_PLUGIN_CC_ROOT/skills/gemini-helper" ~/.codex/skills/gemini-helpe
 # Pi.dev (consult its package docs for the right skills directory; or distribute as an npm package)
 ```
 
-When invoking the host agent, prefer non-interactive modes that auto-approve shell commands (Pi: `--print`, OpenCode: `opencode run`, Codex CLI: `codex exec -s workspace-write`). For Codex CLI specifically, **set `GEMINI_API_KEY` for the session** if Gemini is configured for OAuth — Codex's process isolation prevents Gemini's headless OAuth token refresh from completing the browser handoff, even though the setup probe reports `authenticated: true`. The API key bypasses OAuth entirely.
+When invoking the host agent, prefer non-interactive modes that auto-approve shell commands (Pi: `--print`, OpenCode: `opencode run`, Codex CLI: `codex exec -s workspace-write`). For Codex CLI with Gemini OAuth, also grant the sandbox network access and write access to Gemini's credential directory so headless OAuth-token rotation can complete:
+
+```bash
+codex exec -s workspace-write \
+  -c 'sandbox_workspace_write.writable_roots=["/Users/<you>/.gemini"]' \
+  -c 'sandbox_workspace_write.network_access=true' \
+  --skip-git-repo-check \
+  "your prompt"
+```
+
+Without both, Codex's sandbox blocks Gemini's token refresh and the call falls back to interactive browser auth (which surfaces as `FatalCancellationError: Authentication cancelled by user`, misleadingly).
 
 Once linked, the agent's model loads the skill on demand based on its description. Prerequisites match Claude Code: `gemini` CLI installed and authenticated, `node` 18.18+ on PATH.
 
