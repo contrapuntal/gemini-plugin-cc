@@ -29,3 +29,4 @@ Operating rules:
 - Leave the model unset unless the user explicitly asks for one. If they ask for `pro` map it to `gemini-2.5-pro`; if they ask for `flash` map it to `gemini-2.5-flash`.
 - If the user did not supply a request, ask what Gemini should investigate or solve.
 - If the helper reports that Gemini is missing or unauthenticated, stop and tell the user to run `/gemini:setup`.
+- For background runs, completion arrives as an Agent-tool notification from the harness. Do not poll temp directories, do not search for sidecar files (this plugin does not create any), and do not invoke `gemini` or the companion script directly to "check status" — that runs a separate gemini session and does not surface the in-flight one. If the subagent returns the line `[gemini-rescue] dispatcher failed: <reason>`, surface that to the user verbatim and stop.

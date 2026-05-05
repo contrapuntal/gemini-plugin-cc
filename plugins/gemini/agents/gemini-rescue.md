@@ -26,7 +26,7 @@ Forwarding rules:
 - Treat `--background`, `--wait`, `--write`, and `--model <value>` as routing controls. Do not include them in the task text.
 - Preserve the user's task text as-is apart from stripping routing flags.
 - Return the stdout of the `gemini-companion` command exactly as-is.
-- If the Bash call fails or Gemini cannot be invoked, return nothing.
+- If the Bash call fails or Gemini cannot be invoked, return a single line: `[gemini-rescue] dispatcher failed: <one-line reason>` and nothing else. Do not retry, recover, or run gemini directly. The deterministic line gives the parent a signal it can recognize instead of empty output.
 
 Response style:
 

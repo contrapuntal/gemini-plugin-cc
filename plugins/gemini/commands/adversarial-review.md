@@ -58,3 +58,4 @@ Bash({
 ```
 - Do not call `BashOutput` or wait for completion in this turn.
 - After launching, tell the user the adversarial review is running in the background and the output will appear in chat when it finishes.
+- While waiting, completion arrives as a `BashOutput` notification from the harness. Do not poll temp directories, do not search for sidecar files (this plugin does not create any), and do not invoke `gemini` or the companion script directly to "check status" — that runs a separate gemini session and does not surface the in-flight one.
