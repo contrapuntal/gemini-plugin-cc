@@ -6,8 +6,8 @@ import {
   renderSetupJson,
   renderReviewHeader,
   renderError
-} from "../plugins/gemini/scripts/lib/render.mjs";
-import { buildGeminiArgs } from "../plugins/gemini/scripts/lib/gemini.mjs";
+} from "../plugins/ask-gemini/scripts/lib/render.mjs";
+import { buildGeminiArgs } from "../plugins/ask-gemini/scripts/lib/gemini.mjs";
 
 test("renderSetupText says install when missing", () => {
   const out = renderSetupText({

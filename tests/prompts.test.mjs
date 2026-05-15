@@ -6,7 +6,7 @@ import {
   renderTemplate,
   buildReviewPrompt,
   buildAdversarialPrompt
-} from "../plugins/gemini/scripts/lib/prompts.mjs";
+} from "../plugins/ask-gemini/scripts/lib/prompts.mjs";
 
 test("loadPrompt reads review template", () => {
   const template = loadPrompt("review");

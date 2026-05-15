@@ -4,8 +4,8 @@ argument-hint: "[--background|--wait] [--write] [--model <pro|flash|name>] [what
 allowed-tools: Bash(node:*), AskUserQuestion, Agent
 ---
 
-Invoke the `gemini:gemini-rescue` subagent via the `Agent` tool (`subagent_type: "gemini:gemini-rescue"`), forwarding the raw user request as the prompt.
-`gemini:gemini-rescue` is a subagent, not a skill — do not call `Skill(gemini:gemini-rescue)` (no such skill) or `Skill(gemini:rescue)` (that re-enters this command and hangs the session). The command runs inline so the `Agent` tool stays in scope.
+Invoke the `ask-gemini:gemini-rescue` subagent via the `Agent` tool (`subagent_type: "ask-gemini:gemini-rescue"`), forwarding the raw user request as the prompt.
+`ask-gemini:gemini-rescue` is a subagent, not a skill — do not call `Skill(ask-gemini:gemini-rescue)` (no such skill) or `Skill(ask-gemini:rescue)` (that re-enters this command and hangs the session). The command runs inline so the `Agent` tool stays in scope.
 The final user-visible response must be Gemini's output verbatim.
 
 Raw user request:
@@ -13,7 +13,7 @@ $ARGUMENTS
 
 Execution mode:
 
-- If the request includes `--background`, run the `gemini:gemini-rescue` subagent in the background.
+- If the request includes `--background`, run the `ask-gemini:gemini-rescue` subagent in the background.
 - If the request includes `--wait`, run the subagent in the foreground.
 - If neither flag is present, default to foreground.
 - `--background` and `--wait` are execution flags for Claude Code. Do not forward them to `task`, and do not treat them as part of the natural-language task text.
@@ -28,5 +28,5 @@ Operating rules:
 - Do not ask the subagent to inspect files, monitor progress, summarize output, or do follow-up work of its own.
 - Leave the model unset unless the user explicitly asks for one. If they ask for `pro` map it to `gemini-2.5-pro`; if they ask for `flash` map it to `gemini-2.5-flash`.
 - If the user did not supply a request, ask what Gemini should investigate or solve.
-- If the helper reports that Gemini is missing or unauthenticated, stop and tell the user to run `/gemini:setup`.
+- If the helper reports that Gemini is missing or unauthenticated, stop and tell the user to run `/ask-gemini:setup`.
 - For background runs, completion arrives as an Agent-tool notification from the harness. Do not poll temp directories, do not search for sidecar files (this plugin does not create any), and do not invoke `gemini` or the companion script directly to "check status" — that runs a separate gemini session and does not surface the in-flight one. If the subagent returns the line `[gemini-rescue] dispatcher failed: <reason>`, surface that to the user verbatim and stop.

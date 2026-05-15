@@ -4,14 +4,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { runCommandChecked } from "../plugins/gemini/scripts/lib/process.mjs";
+import { runCommandChecked } from "../plugins/ask-gemini/scripts/lib/process.mjs";
 import {
   ensureGitRepository,
   getCurrentBranch,
   getWorkingTreeState,
   resolveReviewTarget,
   collectReviewContext
-} from "../plugins/gemini/scripts/lib/git.mjs";
+} from "../plugins/ask-gemini/scripts/lib/git.mjs";
 
 function makeTempRepo() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gemini-plugin-test-"));

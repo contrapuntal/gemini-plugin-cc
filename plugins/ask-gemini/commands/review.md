@@ -34,7 +34,7 @@ Argument handling:
 - Do not strip `--wait` or `--background` yourself.
 - Do not add extra review instructions or rewrite the user's intent.
 - The companion script accepts `--wait` and `--background` but treats them as no-ops; Claude Code's `Bash(..., run_in_background: true)` is what actually detaches the run.
-- `/gemini:review` does not take focus text. For steerable reviews, use `/gemini:adversarial-review`.
+- `/ask-gemini:review` does not take focus text. For steerable reviews, use `/ask-gemini:adversarial-review`.
 
 Foreground flow:
 - Run:

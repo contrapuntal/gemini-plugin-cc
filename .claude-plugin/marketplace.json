@@ -1,5 +1,5 @@
 {
-  "name": "google-gemini",
+  "name": "contrapuntal",
   "owner": {
     "name": "gemini-plugin-cc contributors"
   },
@@ -9,13 +9,13 @@
   },
   "plugins": [
     {
-      "name": "gemini",
+      "name": "ask-gemini",
       "description": "Use Gemini from Claude Code to review code or delegate tasks.",
       "version": "1.0.0",
       "author": {
         "name": "gemini-plugin-cc contributors"
       },
-      "source": "./plugins/gemini"
+      "source": "./plugins/ask-gemini"
     }
   ]
 }

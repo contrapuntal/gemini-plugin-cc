@@ -97,7 +97,7 @@ async function runReview(rest, { mode }) {
   const geminiState = detectGemini();
   if (!geminiState.installed) {
     process.stdout.write(
-      "Gemini CLI is not installed. Run /gemini:setup to install it.\n"
+      "Gemini CLI is not installed. Run /ask-gemini:setup to install it.\n"
     );
     return;
   }
@@ -144,7 +144,7 @@ async function runTask(rest) {
   const geminiState = detectGemini();
   if (!geminiState.installed) {
     process.stdout.write(
-      "Gemini CLI is not installed. Run /gemini:setup to install it.\n"
+      "Gemini CLI is not installed. Run /ask-gemini:setup to install it.\n"
     );
     return;
   }

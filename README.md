@@ -6,10 +6,10 @@ This plugin lets Claude Code users reach Gemini without leaving their workflow. 
 
 ## What You Get
 
-- `/gemini:review` — read-only Gemini review
-- `/gemini:adversarial-review` — steerable challenge review
-- `/gemini:rescue` — delegate tasks to Gemini through the `gemini:gemini-rescue` subagent
-- `/gemini:setup` — verify the local Gemini CLI is installed and authenticated
+- `/ask-gemini:review` — read-only Gemini review
+- `/ask-gemini:adversarial-review` — steerable challenge review
+- `/ask-gemini:rescue` — delegate tasks to Gemini through the `gemini:gemini-rescue` subagent
+- `/ask-gemini:setup` — verify the local Gemini CLI is installed and authenticated
 
 ## Requirements
 
@@ -27,7 +27,7 @@ Add the marketplace in Claude Code:
 Install the plugin:
 
 ```bash
-/plugin install gemini@google-gemini
+/plugin install ask-gemini@contrapuntal
 ```
 
 Reload plugins:
@@ -39,10 +39,10 @@ Reload plugins:
 Then run:
 
 ```bash
-/gemini:setup
+/ask-gemini:setup
 ```
 
-`/gemini:setup` reports whether Gemini is ready. If Gemini is missing and npm is available, it offers to install it.
+`/ask-gemini:setup` reports whether Gemini is ready. If Gemini is missing and npm is available, it offers to install it.
 
 To install Gemini yourself:
 
@@ -61,11 +61,11 @@ Sign in with your Google account inside the interactive REPL (or set `GEMINI_API
 After install, you should see:
 
 - the slash commands listed below
-- the `gemini:gemini-rescue` subagent in `/agents`
+- the `ask-gemini:gemini-rescue` subagent in `/agents`
 
 ## Usage
 
-### `/gemini:review`
+### `/ask-gemini:review`
 
 Runs a Gemini review on your current work. Output is markdown organized by severity (Critical / High / Medium / Nits).
 
@@ -77,31 +77,31 @@ Use it to review:
 - your current uncommitted changes
 - your branch against a base branch like `main`
 
-Pass `--base <ref>` for branch review. Also supports `--wait` and `--background`. Read-only and not steerable. To challenge a specific decision or risk area, use [`/gemini:adversarial-review`](#geminiadversarial-review).
+Pass `--base <ref>` for branch review. Also supports `--wait` and `--background`. Read-only and not steerable. To challenge a specific decision or risk area, use [`/ask-gemini:adversarial-review`](#geminiadversarial-review).
 
 ```bash
-/gemini:review
-/gemini:review --base main
-/gemini:review --background
+/ask-gemini:review
+/ask-gemini:review --base main
+/ask-gemini:review --background
 ```
 
 This command never edits files.
 
-### `/gemini:adversarial-review`
+### `/ask-gemini:adversarial-review`
 
-A **steerable** review that challenges the chosen implementation and design. Uses the same review-target selection as `/gemini:review`.
+A **steerable** review that challenges the chosen implementation and design. Uses the same review-target selection as `/ask-gemini:review`.
 
 Supports `--base <ref>`, `--wait`, `--background`, and free-form focus text after the flags.
 
 ```bash
-/gemini:adversarial-review
-/gemini:adversarial-review --base main challenge whether this caching design is right
-/gemini:adversarial-review --background look for race conditions in the retry logic
+/ask-gemini:adversarial-review
+/ask-gemini:adversarial-review --base main challenge whether this caching design is right
+/ask-gemini:adversarial-review --background look for race conditions in the retry logic
 ```
 
 This command never edits files.
 
-### `/gemini:rescue`
+### `/ask-gemini:rescue`
 
 Hands a task to Gemini through the `gemini:gemini-rescue` subagent. Read-only by default — Gemini analyzes and proposes; Claude or you apply the change. Pass `--write` to let Gemini edit files directly via Gemini's `--yolo` mode.
 
@@ -112,10 +112,10 @@ Use it to have Gemini:
 - investigate a bug or run an analysis pass
 
 ```bash
-/gemini:rescue investigate why the build is failing in CI
-/gemini:rescue --model pro analyze the entire src/ directory for race conditions
-/gemini:rescue --write fix the failing test with the smallest safe patch
-/gemini:rescue --background trace every caller of this function across the repo
+/ask-gemini:rescue investigate why the build is failing in CI
+/ask-gemini:rescue --model pro analyze the entire src/ directory for race conditions
+/ask-gemini:rescue --write fix the failing test with the smallest safe patch
+/ask-gemini:rescue --background trace every caller of this function across the repo
 ```
 
 Or just ask:
@@ -129,31 +129,31 @@ Ask Gemini to walk through the auth middleware and find anything that breaks und
 - Model aliases: `pro` → `gemini-2.5-pro`, `flash` → `gemini-2.5-flash`.
 - `--background` runs the rescue as a Claude Code background bash task; output appears in chat when Gemini finishes.
 
-### `/gemini:setup`
+### `/ask-gemini:setup`
 
 Checks whether Gemini is installed and authenticated. If Gemini is missing and `npm` is available, it offers to install it.
 
 ```bash
-/gemini:setup
+/ask-gemini:setup
 ```
 
 ## How it works
 
 The plugin invokes Gemini in non-interactive mode (`gemini --prompt "..."`) with a fixed approval mode:
 
-- **Read-only paths** (`/gemini:review`, `/gemini:adversarial-review`, `/gemini:rescue` without `--write`) use `--approval-mode plan`, so the run cannot hang on an interactive approval prompt and Gemini cannot modify the workspace.
-- **Write path** (`/gemini:rescue --write`) uses `--approval-mode yolo` (equivalent to `--yolo`). Gemini auto-approves all tools, including shell commands.
+- **Read-only paths** (`/ask-gemini:review`, `/ask-gemini:adversarial-review`, `/ask-gemini:rescue` without `--write`) use `--approval-mode plan`, so the run cannot hang on an interactive approval prompt and Gemini cannot modify the workspace.
+- **Write path** (`/ask-gemini:rescue --write`) uses `--approval-mode yolo` (equivalent to `--yolo`). Gemini auto-approves all tools, including shell commands.
 
 ### Model selection
 
-- **`/gemini:review` and `/gemini:adversarial-review`** default to **`gemini-3.1-pro-preview`**. Gemini CLI's "auto" routing can drop a long review prompt onto Flash, which produces noticeably shallower findings on the same input. Pinning reviews to the latest Pro preview keeps quality predictable. Override with `--model flash`, `--model pro` (which still resolves to `gemini-2.5-pro`), or any explicit model name.
-- **`/gemini:rescue`** forces no default. It respects whatever model your Gemini CLI config picks, including auto. Pass `--model pro` (or `--model <name>`) per-call for explicit control.
+- **`/ask-gemini:review` and `/ask-gemini:adversarial-review`** default to **`gemini-3.1-pro-preview`**. Gemini CLI's "auto" routing can drop a long review prompt onto Flash, which produces noticeably shallower findings on the same input. Pinning reviews to the latest Pro preview keeps quality predictable. Override with `--model flash`, `--model pro` (which still resolves to `gemini-2.5-pro`), or any explicit model name.
+- **`/ask-gemini:rescue`** forces no default. It respects whatever model your Gemini CLI config picks, including auto. Pass `--model pro` (or `--model <name>`) per-call for explicit control.
 
 The plugin is **stateless** — no transcripts, no PID files, no session resume. Every invocation is a one-shot Gemini call. This matches Gemini CLI's actual non-interactive shape and keeps the plugin small.
 
 ### Trust model for slash command arguments
 
-Claude Code interpolates slash command arguments (`$ARGUMENTS`) into a Bash command string before passing them to the companion script. This is the standard Claude Code idiom (codex-plugin-cc and other official plugins use the identical pattern). It means **your shell interprets shell metacharacters in slash args** — `/gemini:rescue $(echo hi)` expands the command substitution before reaching the plugin. The threat model assumes you typed the slash command yourself; treat it with the care you'd apply to any command you run directly in your terminal.
+Claude Code interpolates slash command arguments (`$ARGUMENTS`) into a Bash command string before passing them to the companion script. This is the standard Claude Code idiom (codex-plugin-cc and other official plugins use the identical pattern). It means **your shell interprets shell metacharacters in slash args** — `/ask-gemini:rescue $(echo hi)` expands the command substitution before reaching the plugin. The threat model assumes you typed the slash command yourself; treat it with the care you'd apply to any command you run directly in your terminal.
 
 ## What's not included (and why)
 

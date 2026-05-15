@@ -6,7 +6,7 @@ import {
   runCommand,
   DEFAULT_MAX_BUFFER,
   streamCommand
-} from "../plugins/gemini/scripts/lib/process.mjs";
+} from "../plugins/ask-gemini/scripts/lib/process.mjs";
 
 test("runCommand returns nonzero status when child is signaled", () => {
   // Regression: when a child is killed by signal, Node returns

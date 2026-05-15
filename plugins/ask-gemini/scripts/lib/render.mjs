@@ -23,7 +23,7 @@ export function renderSetupText(state) {
 
   lines.push(`Auth: ${state.auth.method}`);
   lines.push("");
-  lines.push("Ready. Try /gemini:review or /gemini:rescue <task>.");
+  lines.push("Ready. Try /ask-gemini:review or /ask-gemini:rescue <task>.");
   return lines.join("\n");
 }
 

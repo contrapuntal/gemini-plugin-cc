@@ -32,7 +32,7 @@ If the JSON result has `installed: true` and `authenticated: false`:
 - Tell the user to run `!gemini` and complete sign-in (Google account or `GEMINI_API_KEY`).
 
 If the JSON result has `ready: true`:
-- Show a brief confirmation and mention `/gemini:review` and `/gemini:rescue` as the next things to try.
+- Show a brief confirmation and mention `/ask-gemini:review` and `/ask-gemini:rescue` as the next things to try.
 
 Output rules:
 - Present the final setup output to the user (the human-readable rerun, not the JSON).

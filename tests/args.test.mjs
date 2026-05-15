@@ -6,8 +6,8 @@ import {
   splitRawArgumentString,
   resolveModelAlias,
   DEFAULT_REVIEW_MODEL
-} from "../plugins/gemini/scripts/lib/args.mjs";
-import { normalizeArgv } from "../plugins/gemini/scripts/gemini-companion.mjs";
+} from "../plugins/ask-gemini/scripts/lib/args.mjs";
+import { normalizeArgv } from "../plugins/ask-gemini/scripts/gemini-companion.mjs";
 
 test("parseArgs handles boolean flags", () => {
   const { options, positionals } = parseArgs(["--write", "fix", "the", "bug"], {

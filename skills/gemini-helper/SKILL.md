@@ -11,7 +11,7 @@ metadata:
 
 This skill lets any Anthropic-Skill-aware agent (Codex CLI, OpenCode, Pi.dev, plus Claude Code via `.claude/skills/`) delegate to Gemini CLI for code review and task analysis. It wraps the `gemini-plugin-cc` companion script — a stateless Node.js dispatcher that assembles the prompt, applies an explicit approval mode (`plan` for read-only paths, `yolo` for write paths), and pipes the prompt through stdin to avoid OS argv length limits.
 
-> If you are running inside Claude Code, prefer the slash-command surface (`/gemini:review`, `/gemini:adversarial-review`, `/gemini:rescue`, `/gemini:setup`) provided by the gemini-plugin-cc plugin. This skill is the portable fallback for agents without that plugin format.
+> If you are running inside Claude Code, prefer the slash-command surface (`/ask-gemini:review`, `/ask-gemini:adversarial-review`, `/ask-gemini:rescue`, `/ask-gemini:setup`) provided by the gemini-plugin-cc plugin. This skill is the portable fallback for agents without that plugin format.
 
 ## Prerequisites
 
@@ -39,10 +39,10 @@ All commands assume the working directory is the repo being reviewed/analyzed. I
 
 ```bash
 GEMINI_CLI_TRUST_WORKSPACE=true \
-  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" review
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/ask-gemini/scripts/gemini-companion.mjs" review
 
 GEMINI_CLI_TRUST_WORKSPACE=true \
-  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" review --base main
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/ask-gemini/scripts/gemini-companion.mjs" review --base main
 ```
 
 The output is markdown with a fixed skeleton: `## Summary` then `### Critical / High / Medium / Nits` sections. Stream it back to the user verbatim.
@@ -51,7 +51,7 @@ The output is markdown with a fixed skeleton: `## Summary` then `### Critical / 
 
 ```bash
 GEMINI_CLI_TRUST_WORKSPACE=true \
-  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" adversarial-review "look for race conditions in the retry path"
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/ask-gemini/scripts/gemini-companion.mjs" adversarial-review "look for race conditions in the retry path"
 ```
 
 Same output shape; framing is "find reasons this should not ship" rather than general review.
@@ -61,18 +61,18 @@ Same output shape; framing is "find reasons this should not ship" rather than ge
 ```bash
 # Read-only: Gemini analyzes and proposes; the host agent or user applies any change.
 GEMINI_CLI_TRUST_WORKSPACE=true \
-  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" task "investigate why the build is failing in CI"
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/ask-gemini/scripts/gemini-companion.mjs" task "investigate why the build is failing in CI"
 
 # Write: Gemini may edit files directly via --yolo. Use only when the user explicitly asked for write-capable execution.
 GEMINI_CLI_TRUST_WORKSPACE=true \
-  node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" task --write "fix the failing test with the smallest safe patch"
+  node "$GEMINI_PLUGIN_CC_ROOT/plugins/ask-gemini/scripts/gemini-companion.mjs" task --write "fix the failing test with the smallest safe patch"
 ```
 
 ### Setup probe (verify install + auth)
 
 ```bash
-node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" setup
-node "$GEMINI_PLUGIN_CC_ROOT/plugins/gemini/scripts/gemini-companion.mjs" setup --json
+node "$GEMINI_PLUGIN_CC_ROOT/plugins/ask-gemini/scripts/gemini-companion.mjs" setup
+node "$GEMINI_PLUGIN_CC_ROOT/plugins/ask-gemini/scripts/gemini-companion.mjs" setup --json
 ```
 
 > Note for Codex CLI users with Gemini OAuth (not `GEMINI_API_KEY`): the live review call may stall on `Opening authentication page in your browser. Do you want to continue? [Y/n]:` even though the setup probe reports `authenticated: true`. Two sandbox restrictions cause this — Codex's `workspace-write` mode (1) blocks outbound network, so Gemini's OAuth-token refresh HTTP request fails, and (2) blocks writes outside the workspace, so Gemini cannot persist the rotated token to `~/.gemini/oauth_creds.json`. Either failure makes Gemini fall back to interactive browser auth, which Codex's process isolation cannot complete. **Both** must be granted:
@@ -105,12 +105,12 @@ For large reviews (multi-file diffs, branch reviews, or long rescue tasks), run 
 
 ## What this skill is NOT
 
-- **Not a slash-command surface.** Skills are model-invoked; for `/gemini:review`-style UX, install the gemini-plugin-cc *plugin* into Claude Code instead.
+- **Not a slash-command surface.** Skills are model-invoked; for `/ask-gemini:review`-style UX, install the gemini-plugin-cc *plugin* into Claude Code instead.
 - **Not stateful.** No transcripts, no session resume, no PID tracking. Every invocation is a fresh one-shot Gemini call.
 - **Not a rewrite proxy.** The read-only paths (`review`, `adversarial-review`, default `task`) are guaranteed by `--approval-mode plan`; only `task --write` can modify the workspace.
 
 ## Reference
 
-- Source: gemini-plugin-cc repository, `plugins/gemini/scripts/gemini-companion.mjs`
+- Source: gemini-plugin-cc repository, `plugins/ask-gemini/scripts/gemini-companion.mjs`
 - License: Apache-2.0
 - Test suite: `node --test tests/*.test.mjs` from the repo root (64 tests covering arg parsing, prompt assembly, git context collection, prompt-injection sanitization, symlink-exfiltration prevention, and process-signal handling)
