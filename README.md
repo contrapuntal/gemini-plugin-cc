@@ -8,55 +8,55 @@ This plugin lets Claude Code users reach Gemini without leaving their workflow. 
 
 - `/ask-gemini:review` — read-only Gemini review
 - `/ask-gemini:adversarial-review` — steerable challenge review
-- `/ask-gemini:rescue` — delegate tasks to Gemini through the `gemini:gemini-rescue` subagent
+- `/ask-gemini:rescue` — delegate tasks to Gemini through the `ask-gemini:gemini-rescue` subagent
 - `/ask-gemini:setup` — verify the local Gemini CLI is installed and authenticated
 
-## Requirements
+## Prerequisites
 
-- **Google account (free tier available) or `GEMINI_API_KEY`.**
-- **Node.js 18.18 or later**
+You need a working Gemini CLI on your machine **before** installing this plugin. The plugin is a thin adapter — it wraps `gemini`, it doesn't replace it.
+
+1. **Install Gemini CLI**
+
+   ```bash
+   npm install -g @google/gemini-cli
+   # or
+   brew install gemini-cli
+   ```
+
+2. **Authenticate**
+
+   Run `gemini` interactively once and sign in with your Google account (free tier available), or set `GEMINI_API_KEY` in your environment.
+
+   ```bash
+   gemini
+   # complete sign-in, then exit
+   ```
+
+3. **Verify Gemini works**
+
+   ```bash
+   gemini --prompt "what is 2+2"
+   ```
+
+4. **Node.js 18.18 or later** on PATH — the plugin's companion script runs through `node`, and Gemini CLI requires it too.
+
+If you skip step 1, `/ask-gemini:setup` (below) can install Gemini for you via npm — but it can't install via brew, and step 2 (signing in) is always your responsibility.
 
 ## Install
 
-Add the marketplace in Claude Code:
+Add the marketplace, install the plugin, reload:
 
 ```bash
 /plugin marketplace add contrapuntal/gemini-plugin-cc
-```
-
-Install the plugin:
-
-```bash
 /plugin install ask-gemini@contrapuntal
-```
-
-Reload plugins:
-
-```bash
 /reload-plugins
 ```
 
-Then run:
+Then verify the plugin sees a working Gemini:
 
 ```bash
 /ask-gemini:setup
 ```
-
-`/ask-gemini:setup` reports whether Gemini is ready. If Gemini is missing and npm is available, it offers to install it.
-
-To install Gemini yourself:
-
-```bash
-npm install -g @google/gemini-cli
-```
-
-If Gemini is installed but not signed in:
-
-```bash
-!gemini
-```
-
-Sign in with your Google account inside the interactive REPL (or set `GEMINI_API_KEY` in your environment), then exit.
 
 After install, you should see:
 
