@@ -4,6 +4,9 @@ Run Antigravity from inside Claude Code for code reviews and delegated tasks.
 
 This plugin lets Claude Code users reach Antigravity without leaving their workflow. It adapts [codex-plugin-cc](https://github.com/openai/codex-plugin-cc) to the Antigravity CLI (`agy`) runtime model.
 
+> [!IMPORTANT]
+> **This wraps the Antigravity *CLI*, not the Antigravity IDE.** "Antigravity" names several Google products. This plugin drives `agy`, the standalone command-line binary — it does not connect to or control the Antigravity app or the Antigravity IDE, which have no programmatic interface. Having the GUI installed is neither sufficient (you still need `agy` on your PATH) nor required (the CLI works on its own).
+
 ## What You Get
 
 - `/ask-antigravity:review` — read-only Antigravity review
