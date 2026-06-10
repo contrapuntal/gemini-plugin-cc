@@ -52,7 +52,7 @@ You need a working Antigravity CLI on your machine **before** installing this pl
 Add the marketplace, install the plugin, reload:
 
 ```bash
-/plugin marketplace add contrapuntal/antigravity-plugin-cc
+/plugin marketplace add contrapuntal/antigravity-cli-plugin-cc
 /plugin install ask-antigravity@contrapuntal
 /reload-plugins
 ```
@@ -187,7 +187,7 @@ You lose the slash-command UX in these agents, but the capability remains reacha
 ### Copilot CLI
 
 ```bash
-copilot plugin install contrapuntal/antigravity-plugin-cc
+copilot plugin install contrapuntal/antigravity-cli-plugin-cc
 ```
 
 The plugin's `agents/antigravity-rescue.md` also loads as a Copilot agent automatically.
@@ -196,17 +196,17 @@ The plugin's `agents/antigravity-rescue.md` also loads as a Copilot agent automa
 
 ```bash
 # Set this once per shell (or in your shell rc).
-# ANTIGRAVITY_PLUGIN_CC_ROOT lets the skill find the companion script.
-export ANTIGRAVITY_PLUGIN_CC_ROOT="$(pwd)"
+# ANTIGRAVITY_CLI_PLUGIN_CC_ROOT lets the skill find the companion script.
+export ANTIGRAVITY_CLI_PLUGIN_CC_ROOT="$(pwd)"
 
 # If agy hasn't been interactively trusted in your working dir, trust the
 # workspace in agy (it records trustedWorkspaces in its settings.json).
 
 # OpenCode
-ln -s "$ANTIGRAVITY_PLUGIN_CC_ROOT/skills/antigravity-helper" ~/.config/opencode/skills/antigravity-helper
+ln -s "$ANTIGRAVITY_CLI_PLUGIN_CC_ROOT/skills/antigravity-helper" ~/.config/opencode/skills/antigravity-helper
 
 # Codex CLI
-ln -s "$ANTIGRAVITY_PLUGIN_CC_ROOT/skills/antigravity-helper" ~/.codex/skills/antigravity-helper
+ln -s "$ANTIGRAVITY_CLI_PLUGIN_CC_ROOT/skills/antigravity-helper" ~/.codex/skills/antigravity-helper
 
 # Pi.dev (consult its package docs for the right skills directory; or distribute as an npm package)
 ```

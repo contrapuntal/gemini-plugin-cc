@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// antigravity-plugin-cc companion script.
+// antigravity-cli-plugin-cc companion script.
 // Single dispatcher for the antigravity plugin's four subcommands.
 
 import process from "node:process";
