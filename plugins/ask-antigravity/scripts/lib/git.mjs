@@ -7,7 +7,7 @@ import { runCommand, runCommandChecked, formatCommandFailure } from "./process.m
 
 // Cap each untracked file's inlined body. Larger files get listed by path
 // only, so a stray multi-megabyte log or generated artifact cannot blow up
-// the prompt size or push past Gemini's input limit.
+// the prompt size or push past agy's input limit.
 const MAX_UNTRACKED_BYTES = 24 * 1024;
 
 function isProbablyText(buffer) {

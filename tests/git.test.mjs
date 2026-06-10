@@ -4,17 +4,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { runCommandChecked } from "../plugins/ask-gemini/scripts/lib/process.mjs";
+import { runCommandChecked } from "../plugins/ask-antigravity/scripts/lib/process.mjs";
 import {
   ensureGitRepository,
   getCurrentBranch,
   getWorkingTreeState,
   resolveReviewTarget,
   collectReviewContext
-} from "../plugins/ask-gemini/scripts/lib/git.mjs";
+} from "../plugins/ask-antigravity/scripts/lib/git.mjs";
 
 function makeTempRepo() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gemini-plugin-test-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-plugin-test-"));
   runCommandChecked("git", ["init", "--initial-branch=main", dir]);
   runCommandChecked("git", ["-C", dir, "config", "user.email", "test@example.com"]);
   runCommandChecked("git", ["-C", dir, "config", "user.name", "Test"]);
@@ -38,7 +38,7 @@ test("ensureGitRepository accepts a repo", () => {
 });
 
 test("ensureGitRepository rejects a non-repo", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gemini-plugin-not-repo-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-plugin-not-repo-"));
   try {
     assert.throws(() => ensureGitRepository(dir), /must run inside a Git repository/);
   } finally {
@@ -123,7 +123,7 @@ test("collectReviewContext inlines untracked file contents", () => {
     assert.equal(context.isEmpty, false);
     assert.match(context.content, /Untracked Files/);
     assert.match(context.content, /feature\.js/);
-    // Regression: the body, not just the path, must reach Gemini.
+    // Regression: the body, not just the path, must reach Antigravity.
     assert.match(context.content, /SECRET_MARKER_42/);
     assert.match(context.summary, /1 untracked/);
   } finally {
@@ -215,10 +215,10 @@ test("collectReviewContext skips untracked symlinks instead of following them", 
   // Regression: fs.statSync + fs.readFileSync follow symlinks. An untracked
   // symlink to a sensitive file outside the repo (e.g. notes.txt -> ~/.ssh/...)
   // would silently get its target's contents inlined into the prompt and
-  // shipped to Gemini. Use lstat and skip symlinks; only the path appears
+  // shipped to Antigravity. Use lstat and skip symlinks; only the path appears
   // in the listing.
   const dir = makeTempRepo();
-  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), "gemini-symlink-target-"));
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-symlink-target-"));
   try {
     const sensitivePath = path.join(targetDir, "secret.txt");
     fs.writeFileSync(sensitivePath, "OUT_OF_REPO_SECRET_DO_NOT_LEAK");

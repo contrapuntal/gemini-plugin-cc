@@ -1,11 +1,11 @@
 ---
-description: Run a Gemini code review against local git state
-argument-hint: '[--wait|--background] [--base <ref>] [--model <pro|flash|name>]'
+description: Run an Antigravity code review against local git state
+argument-hint: '[--wait|--background] [--base <ref>] [--model <name>]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 ---
 
-Run a Gemini review through the shared plugin runtime.
+Run an Antigravity review through the shared plugin runtime.
 
 Raw slash-command arguments:
 `$ARGUMENTS`
@@ -13,7 +13,7 @@ Raw slash-command arguments:
 Core constraint:
 - This command is review-only.
 - Do not fix issues, apply patches, or suggest that you are about to make changes.
-- Your only job is to run the review and return Gemini's output verbatim to the user.
+- Your only job is to run the review and return Antigravity's output verbatim to the user.
 
 Execution mode rules:
 - If the raw arguments include `--wait`, do not ask. Run the review in the foreground.
@@ -34,12 +34,12 @@ Argument handling:
 - Do not strip `--wait` or `--background` yourself.
 - Do not add extra review instructions or rewrite the user's intent.
 - The companion script accepts `--wait` and `--background` but treats them as no-ops; Claude Code's `Bash(..., run_in_background: true)` is what actually detaches the run.
-- `/ask-gemini:review` does not take focus text. For steerable reviews, use `/ask-gemini:adversarial-review`.
+- `/ask-antigravity:review` does not take focus text. For steerable reviews, use `/ask-antigravity:adversarial-review`.
 
 Foreground flow:
 - Run:
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/gemini-companion.mjs" review "$ARGUMENTS"
+node "${CLAUDE_PLUGIN_ROOT}/scripts/antigravity-companion.mjs" review "$ARGUMENTS"
 ```
 - Return the command stdout verbatim, exactly as-is.
 - Do not paraphrase, summarize, or add commentary before or after it.
@@ -49,11 +49,11 @@ Background flow:
 - Launch the review with `Bash` in the background:
 ```typescript
 Bash({
-  command: `node "${CLAUDE_PLUGIN_ROOT}/scripts/gemini-companion.mjs" review "$ARGUMENTS"`,
-  description: "Gemini review",
+  command: `node "${CLAUDE_PLUGIN_ROOT}/scripts/antigravity-companion.mjs" review "$ARGUMENTS"`,
+  description: "Antigravity review",
   run_in_background: true
 })
 ```
 - Do not call `BashOutput` or wait for completion in this turn.
-- After launching, tell the user the Gemini review is running in the background and the output will appear in chat when it finishes.
-- While waiting, completion arrives as a `BashOutput` notification from the harness. Do not poll temp directories, do not search for sidecar files (this plugin does not create any), and do not invoke `gemini` or the companion script directly to "check status" — that runs a separate gemini session and does not surface the in-flight one.
+- After launching, tell the user the Antigravity review is running in the background and the output will appear in chat when it finishes.
+- While waiting, completion arrives as a `BashOutput` notification from the harness. Do not poll temp directories, do not search for sidecar files (this plugin does not create any), and do not invoke `agy` or the companion script directly to "check status" — that runs a separate agy session and does not surface the in-flight one.

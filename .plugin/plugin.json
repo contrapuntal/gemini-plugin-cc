@@ -1,13 +1,13 @@
 {
-  "name": "gemini-plugin-cc",
-  "displayName": "Gemini Helper",
-  "description": "Run Gemini from inside Copilot CLI for code reviews and delegated tasks. Wraps the gemini-plugin-cc companion script.",
-  "version": "1.0.0",
+  "name": "antigravity-plugin-cc",
+  "displayName": "Antigravity Helper",
+  "description": "Run Antigravity from inside Copilot CLI for code reviews and delegated tasks. Wraps the antigravity-plugin-cc companion script.",
+  "version": "1.1.0",
   "author": {
-    "name": "gemini-plugin-cc contributors"
+    "name": "antigravity-plugin-cc contributors"
   },
   "license": "Apache-2.0",
-  "homepage": "https://github.com/contrapuntal/gemini-plugin-cc",
-  "repository": "https://github.com/contrapuntal/gemini-plugin-cc",
+  "homepage": "https://github.com/contrapuntal/antigravity-plugin-cc",
+  "repository": "https://github.com/contrapuntal/antigravity-plugin-cc",
   "skills": "./skills/"
 }

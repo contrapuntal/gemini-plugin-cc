@@ -6,8 +6,8 @@ import {
   splitRawArgumentString,
   resolveModelAlias,
   DEFAULT_REVIEW_MODEL
-} from "../plugins/ask-gemini/scripts/lib/args.mjs";
-import { normalizeArgv } from "../plugins/ask-gemini/scripts/gemini-companion.mjs";
+} from "../plugins/ask-antigravity/scripts/lib/args.mjs";
+import { normalizeArgv } from "../plugins/ask-antigravity/scripts/antigravity-companion.mjs";
 
 test("parseArgs handles boolean flags", () => {
   const { options, positionals } = parseArgs(["--write", "fix", "the", "bug"], {
@@ -83,13 +83,9 @@ test("splitRawArgumentString handles backslash escapes", () => {
   );
 });
 
-test("resolveModelAlias maps known aliases", () => {
-  assert.equal(resolveModelAlias("pro"), "gemini-2.5-pro");
-  assert.equal(resolveModelAlias("flash"), "gemini-2.5-flash");
-});
-
-test("resolveModelAlias passes through unknown names", () => {
-  assert.equal(resolveModelAlias("gemini-2.5-pro"), "gemini-2.5-pro");
+test("resolveModelAlias passes model names through unchanged", () => {
+  // agy has no built-in aliases; values must be exact agy display names.
+  assert.equal(resolveModelAlias("Gemini 3.5 Flash (High)"), "Gemini 3.5 Flash (High)");
   assert.equal(resolveModelAlias("custom-model-name"), "custom-model-name");
 });
 
@@ -99,10 +95,10 @@ test("resolveModelAlias returns null for falsy input", () => {
   assert.equal(resolveModelAlias(""), null);
 });
 
-test("DEFAULT_REVIEW_MODEL pins reviews to the latest Pro preview", () => {
-  // Reviews must not silently degrade to Flash via Gemini's auto routing.
-  // If this constant changes, update README and confirm intent.
-  assert.equal(DEFAULT_REVIEW_MODEL, "gemini-3.1-pro-preview");
+test("DEFAULT_REVIEW_MODEL is null so reviews use the user's agy model", () => {
+  // agy model values are display names that vary by account/version; hardcoding
+  // one risks an invalid value. null means "don't override settings.json".
+  assert.equal(DEFAULT_REVIEW_MODEL, null);
 });
 
 test("normalizeArgv passes multi-element argv through untouched", () => {

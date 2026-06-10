@@ -5,8 +5,13 @@ import { spawnSync } from "node:child_process";
 import {
   runCommand,
   DEFAULT_MAX_BUFFER,
-  streamCommand
-} from "../plugins/ask-gemini/scripts/lib/process.mjs";
+  streamCommand,
+  captureCommand,
+  stripAnsi,
+  cleanOutput
+} from "../plugins/ask-antigravity/scripts/lib/process.mjs";
+
+const ESC = String.fromCharCode(27);
 
 test("runCommand returns nonzero status when child is signaled", () => {
   // Regression: when a child is killed by signal, Node returns
@@ -78,7 +83,7 @@ test("streamCommand pipes options.input to child stdin", async () => {
   const fs = await import("node:fs");
   const os = await import("node:os");
   const path = await import("node:path");
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gemini-stream-input-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-stream-input-"));
   const markerPath = path.join(dir, "marker.txt");
   try {
     const result = await streamCommand("node", [
@@ -97,6 +102,66 @@ test("streamCommand pipes options.input to child stdin", async () => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("captureCommand captures stdout from a directly-spawned child", async () => {
+  const result = await captureCommand("node", ["-e", "process.stdout.write('captured-ok')"], {
+    timeoutMs: 15000
+  });
+  assert.equal(result.status, 0);
+  assert.equal(result.timedOut, false);
+  assert.match(result.stdout, /captured-ok/);
+});
+
+test("captureCommand captures stderr separately", async () => {
+  const result = await captureCommand("node", ["-e", "process.stderr.write('warn-line')"], {
+    timeoutMs: 15000
+  });
+  assert.equal(result.status, 0);
+  assert.match(result.stderr, /warn-line/);
+  assert.ok(!result.stdout.includes("warn-line"));
+});
+
+test("captureCommand kills a wedged child on timeout and reports timedOut", async () => {
+  const result = await captureCommand("node", ["-e", "setInterval(()=>{}, 1000)"], {
+    timeoutMs: 300
+  });
+  assert.equal(result.timedOut, true);
+  assert.notEqual(result.status, 0, "a timed-out child must not look successful");
+});
+
+test("captureCommand surfaces a non-zero child exit code", async () => {
+  const result = await captureCommand("node", ["-e", "process.exit(3)"], { timeoutMs: 15000 });
+  assert.equal(result.status, 3);
+});
+
+test("captureCommand normalizes CRLF and strips ANSI from stdout", async () => {
+  const result = await captureCommand(
+    "node",
+    ["-e", "process.stdout.write('\\u001b[31mred\\u001b[0m\\r\\nplain\\r\\n')"],
+    { timeoutMs: 15000 }
+  );
+  assert.equal(result.stdout, "red\nplain\n");
+});
+
+test("stripAnsi removes CSI color sequences but keeps text", () => {
+  const colored = `${ESC}[31mred${ESC}[0m and ${ESC}[1;32mgreen${ESC}[0m`;
+  assert.equal(stripAnsi(colored), "red and green");
+});
+
+test("stripAnsi leaves plain text untouched", () => {
+  assert.equal(stripAnsi("just text 123 !@#"), "just text 123 !@#");
+});
+
+test("cleanOutput normalizes CRLF and strips ANSI", () => {
+  const raw = `${ESC}[2KPONG\r\nsecond line\r\n`;
+  assert.equal(cleanOutput(raw), "PONG\nsecond line\n");
+});
+
+test("cleanOutput handles empty/nullish input", () => {
+  assert.equal(cleanOutput(""), "");
+  assert.equal(cleanOutput(null), "");
+  assert.equal(cleanOutput(undefined), "");
 });
 
 test("streamCommand returns nonzero status when child is signaled", async () => {

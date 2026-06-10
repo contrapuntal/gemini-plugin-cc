@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// gemini-plugin-cc companion script.
-// Single dispatcher for the gemini plugin's four subcommands.
+// antigravity-plugin-cc companion script.
+// Single dispatcher for the antigravity plugin's four subcommands.
 
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -12,7 +12,13 @@ import {
   DEFAULT_REVIEW_MODEL
 } from "./lib/args.mjs";
 import { resolveReviewTarget, collectReviewContext } from "./lib/git.mjs";
-import { detectGemini, detectNpm, detectAuth, invokeGemini } from "./lib/gemini.mjs";
+import {
+  detectAntigravity,
+  detectAuth,
+  invokeAntigravity,
+  installHint,
+  MIN_AGY_VERSION
+} from "./lib/agy.mjs";
 import { buildReviewPrompt, buildAdversarialPrompt } from "./lib/prompts.mjs";
 import {
   renderSetupText,
@@ -22,7 +28,7 @@ import {
 } from "./lib/render.mjs";
 
 // Top-level argv shape:
-//   gemini-companion.mjs <subcommand> [args...]
+//   antigravity-companion.mjs <subcommand> [args...]
 // For review/adversarial-review/task we receive a single quoted string from
 // $ARGUMENTS; we split it ourselves for predictable behavior.
 
@@ -35,7 +41,7 @@ async function main() {
   if (!SUBCOMMANDS.has(subcommand)) {
     process.stderr.write(
       `Unknown subcommand: ${subcommand || "(none)"}\n` +
-        `Usage: gemini-companion.mjs <setup|review|adversarial-review|task> [args]\n`
+        `Usage: antigravity-companion.mjs <setup|review|adversarial-review|task> [args]\n`
     );
     process.exit(2);
   }
@@ -76,16 +82,37 @@ async function runSetup(rest) {
   });
 
   const state = {
-    gemini: detectGemini(),
+    antigravity: detectAntigravity(),
     auth: { authenticated: false },
-    npm: detectNpm()
+    installHint: installHint()
   };
-  if (state.gemini.installed) {
+  if (state.antigravity.installed) {
     state.auth = detectAuth();
   }
 
   const output = options.json ? renderSetupJson(state) : renderSetupText(state);
   process.stdout.write(output + "\n");
+}
+
+// Gate every invocation path on an installed, version-supported agy. Returns
+// false (after printing guidance) when invoking would fail or hang.
+function agyUsable() {
+  const agyState = detectAntigravity();
+  if (!agyState.installed) {
+    process.stdout.write(
+      "Antigravity CLI (agy) is not installed. Run /ask-antigravity:setup to install it.\n"
+    );
+    return false;
+  }
+  if (!agyState.supported) {
+    process.stdout.write(
+      `Antigravity CLI ${agyState.version} is older than the minimum supported ` +
+        `${MIN_AGY_VERSION} (headless print mode hangs on older versions). ` +
+        `Please upgrade agy — re-run the installer or 'brew upgrade antigravity-cli' — and retry.\n`
+    );
+    return false;
+  }
+  return true;
 }
 
 async function runReview(rest, { mode }) {
@@ -94,11 +121,7 @@ async function runReview(rest, { mode }) {
     booleanOptions: ["wait", "background"]
   });
 
-  const geminiState = detectGemini();
-  if (!geminiState.installed) {
-    process.stdout.write(
-      "Gemini CLI is not installed. Run /ask-gemini:setup to install it.\n"
-    );
+  if (!agyUsable()) {
     return;
   }
 
@@ -129,7 +152,7 @@ async function runReview(rest, { mode }) {
   process.stdout.write(renderReviewHeader({ summary: context.summary, target, mode }));
 
   const model = resolveModelAlias(options.model) ?? DEFAULT_REVIEW_MODEL;
-  const result = await invokeGemini({ prompt, model, write: false, cwd });
+  const result = await invokeAntigravity({ prompt, model, write: false, cwd });
   if (result.status !== 0) {
     process.exit(result.status || 1);
   }
@@ -141,11 +164,7 @@ async function runTask(rest) {
     booleanOptions: ["write", "wait", "background"]
   });
 
-  const geminiState = detectGemini();
-  if (!geminiState.installed) {
-    process.stdout.write(
-      "Gemini CLI is not installed. Run /ask-gemini:setup to install it.\n"
-    );
+  if (!agyUsable()) {
     return;
   }
 
@@ -157,7 +176,7 @@ async function runTask(rest) {
 
   const cwd = process.cwd();
   const model = resolveModelAlias(options.model);
-  const result = await invokeGemini({
+  const result = await invokeAntigravity({
     prompt: taskText,
     model,
     write: Boolean(options.write),

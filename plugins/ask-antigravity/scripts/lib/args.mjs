@@ -129,18 +129,18 @@ export function splitRawArgumentString(raw) {
   return tokens;
 }
 
-const MODEL_ALIASES = {
-  pro: "gemini-2.5-pro",
-  flash: "gemini-2.5-flash"
-};
+// agy's print mode takes --model with a display name from `agy models` (e.g.
+// "Gemini 3.5 Flash (Low)"). Values pass through unchanged; the alias map is a
+// hook for future shorthand (e.g. "flash") and currently empty.
+const MODEL_ALIASES = {};
 
 export function resolveModelAlias(model) {
   if (!model) return null;
   return MODEL_ALIASES[model] ?? model;
 }
 
-// Reviews are high-value-per-call and benefit from depth. Gemini CLI's
-// "auto" routing can drop a long review prompt onto Flash, which produces
-// shallower findings on the same input. Pin reviews to the latest Pro
-// preview so the quality is predictable; users can still override with --model.
-export const DEFAULT_REVIEW_MODEL = "gemini-3.1-pro-preview";
+// Reviews default to whatever model the user has selected in the agy TUI; the
+// plugin pins no default (agy model values are display names that vary by
+// account and version). null means "pass no --model flag". An explicit
+// --model on the command overrides this.
+export const DEFAULT_REVIEW_MODEL = null;

@@ -88,8 +88,10 @@ export function formatCommandFailure(result) {
 }
 
 // Stream a child process's stdout/stderr to this process's stdio while
-// also returning the exit code. Used for invoking gemini so the user sees
-// output as it arrives instead of buffered until completion.
+// also returning the exit code, so the user sees output as it arrives
+// instead of buffered until completion. (agy is invoked via captureCommand,
+// which buffers for marker extraction; this generic streamer remains
+// available for other commands.)
 //
 // When `options.input` is a string, it is written to the child's stdin and
 // stdin is closed afterward. This is the route for prompt bodies that
@@ -120,6 +122,83 @@ export function streamCommand(command, args = [], options = {}) {
       child.stdin.on("error", reject);
       child.stdin.end(options.input);
     }
+  });
+}
+
+// Remove ANSI CSI escape sequences (ESC '[' params... final byte 0x40-0x7E).
+// agy print mode emits clean text; this is defensive. Implemented as a small
+// scanner to avoid embedding raw control bytes in a regex literal.
+const ESC = String.fromCharCode(27);
+
+export function stripAnsi(text) {
+  let out = "";
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === ESC && text[i + 1] === "[") {
+      i += 2;
+      while (i < text.length) {
+        const code = text.charCodeAt(i);
+        if (code >= 0x40 && code <= 0x7e) break; // final byte
+        i += 1;
+      }
+      continue; // skip the final byte too (loop increment)
+    }
+    out += text[i];
+  }
+  return out;
+}
+
+// Pure, unit-testable: normalize captured output to clean text — collapse CRLF
+// and strip ANSI control sequences.
+export function cleanOutput(raw) {
+  if (!raw) return "";
+  return stripAnsi(String(raw)).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+// Run `command args...` capturing cleaned stdout and raw stderr, with a hard
+// timeout that SIGKILLs a wedged child. Resolves
+// { status, signal, stdout, stderr, timedOut }. Never rejects on a non-zero
+// child exit; only rejects if the command fails to launch (e.g. ENOENT).
+export function captureCommand(command, args = [], options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true
+    });
+
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+
+    let timer = null;
+    if (options.timeoutMs && options.timeoutMs > 0) {
+      timer = setTimeout(() => {
+        timedOut = true;
+        child.kill("SIGKILL");
+      }, options.timeoutMs);
+    }
+
+    child.on("error", (error) => {
+      if (timer) clearTimeout(timer);
+      reject(error);
+    });
+    child.on("close", (code, signal) => {
+      if (timer) clearTimeout(timer);
+      resolve({
+        status: signal ? 128 + signalNumber(signal) : (code ?? 0),
+        signal: signal ?? null,
+        stdout: cleanOutput(stdout),
+        stderr,
+        timedOut
+      });
+    });
   });
 }
 

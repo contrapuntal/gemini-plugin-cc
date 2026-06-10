@@ -1,73 +1,75 @@
-# Gemini plugin for Claude Code
+# Antigravity plugin for Claude Code
 
-Run Gemini from inside Claude Code for code reviews and delegated tasks.
+Run Antigravity from inside Claude Code for code reviews and delegated tasks.
 
-This plugin lets Claude Code users reach Gemini without leaving their workflow. It adapts [codex-plugin-cc](https://github.com/openai/codex-plugin-cc) to Gemini CLI's runtime model.
+This plugin lets Claude Code users reach Antigravity without leaving their workflow. It adapts [codex-plugin-cc](https://github.com/openai/codex-plugin-cc) to the Antigravity CLI (`agy`) runtime model.
 
 ## What You Get
 
-- `/ask-gemini:review` — read-only Gemini review
-- `/ask-gemini:adversarial-review` — steerable challenge review
-- `/ask-gemini:rescue` — delegate tasks to Gemini through the `ask-gemini:gemini-rescue` subagent
-- `/ask-gemini:setup` — verify the local Gemini CLI is installed and authenticated
+- `/ask-antigravity:review` — read-only Antigravity review
+- `/ask-antigravity:adversarial-review` — steerable challenge review
+- `/ask-antigravity:rescue` — delegate tasks to Antigravity through the `ask-antigravity:antigravity-rescue` subagent
+- `/ask-antigravity:setup` — verify the local Antigravity CLI is installed and authenticated
 
 ## Prerequisites
 
-You need a working Gemini CLI on your machine **before** installing this plugin. The plugin is a thin adapter — it wraps `gemini`, it doesn't replace it.
+You need a working Antigravity CLI on your machine **before** installing this plugin. The plugin is a thin adapter — it wraps `agy`, it doesn't replace it.
 
-1. **Install Gemini CLI**
+1. **Install Antigravity CLI**
 
    ```bash
-   npm install -g @google/gemini-cli
+   curl -fsSL https://antigravity.google/cli/install.sh | bash
    # or
-   brew install gemini-cli
+   brew install --cask antigravity-cli
    ```
+
+   (Antigravity is not distributed via npm.) Version **1.0.7 or later** is required — check with `agy --version`, and re-run the installer to upgrade an older install.
 
 2. **Authenticate**
 
-   Run `gemini` interactively once and sign in with your Google account (free tier available), or set `GEMINI_API_KEY` in your environment.
+   Run `agy` interactively once and sign in with your Google account, or set `ANTIGRAVITY_API_KEY` in your environment.
 
    ```bash
-   gemini
+   agy
    # complete sign-in, then exit
    ```
 
-3. **Verify Gemini works**
+3. **Verify agy works**
 
    ```bash
-   gemini --prompt "what is 2+2"
+   agy -p "what is 2+2"
    ```
 
-4. **Node.js 18.18 or later** on PATH — the plugin's companion script runs through `node`, and Gemini CLI requires it too.
+4. **Node.js 18.18 or later** on PATH — the plugin's companion script runs through `node`.
 
-If you skip step 1, `/ask-gemini:setup` (below) can install Gemini for you via npm — but it can't install via brew, and step 2 (signing in) is always your responsibility.
+`/ask-antigravity:setup` (below) prints the install command for you if `agy` is missing, but it never runs a remote installer on your behalf — installing and signing in are always your responsibility.
 
 ## Install
 
 Add the marketplace, install the plugin, reload:
 
 ```bash
-/plugin marketplace add contrapuntal/gemini-plugin-cc
-/plugin install ask-gemini@contrapuntal
+/plugin marketplace add contrapuntal/antigravity-plugin-cc
+/plugin install ask-antigravity@contrapuntal
 /reload-plugins
 ```
 
-Then verify the plugin sees a working Gemini:
+Then verify the plugin sees a working Antigravity:
 
 ```bash
-/ask-gemini:setup
+/ask-antigravity:setup
 ```
 
 After install, you should see:
 
 - the slash commands listed below
-- the `ask-gemini:gemini-rescue` subagent in `/agents`
+- the `ask-antigravity:antigravity-rescue` subagent in `/agents`
 
 ## Usage
 
-### `/ask-gemini:review`
+### `/ask-antigravity:review`
 
-Runs a Gemini review on your current work. Output is markdown organized by severity (Critical / High / Medium / Nits).
+Runs an Antigravity review on your current work. Output is markdown organized by severity (Critical / High / Medium / Nits).
 
 > [!NOTE]
 > Multi-file reviews can take a while. Use background mode for anything larger than ~2 files.
@@ -77,83 +79,85 @@ Use it to review:
 - your current uncommitted changes
 - your branch against a base branch like `main`
 
-Pass `--base <ref>` for branch review. Also supports `--wait` and `--background`. Read-only and not steerable. To challenge a specific decision or risk area, use [`/ask-gemini:adversarial-review`](#geminiadversarial-review).
+Pass `--base <ref>` for branch review. Also supports `--wait` and `--background`. Read-only and not steerable. To challenge a specific decision or risk area, use [`/ask-antigravity:adversarial-review`](#ask-antigravityadversarial-review).
 
 ```bash
-/ask-gemini:review
-/ask-gemini:review --base main
-/ask-gemini:review --background
+/ask-antigravity:review
+/ask-antigravity:review --base main
+/ask-antigravity:review --background
 ```
 
 This command never edits files.
 
-### `/ask-gemini:adversarial-review`
+### `/ask-antigravity:adversarial-review`
 
-A **steerable** review that challenges the chosen implementation and design. Uses the same review-target selection as `/ask-gemini:review`.
+A **steerable** review that challenges the chosen implementation and design. Uses the same review-target selection as `/ask-antigravity:review`.
 
 Supports `--base <ref>`, `--wait`, `--background`, and free-form focus text after the flags.
 
 ```bash
-/ask-gemini:adversarial-review
-/ask-gemini:adversarial-review --base main challenge whether this caching design is right
-/ask-gemini:adversarial-review --background look for race conditions in the retry logic
+/ask-antigravity:adversarial-review
+/ask-antigravity:adversarial-review --base main challenge whether this caching design is right
+/ask-antigravity:adversarial-review --background look for race conditions in the retry logic
 ```
 
 This command never edits files.
 
-### `/ask-gemini:rescue`
+### `/ask-antigravity:rescue`
 
-Hands a task to Gemini through the `gemini:gemini-rescue` subagent. Read-only by default — Gemini analyzes and proposes; Claude or you apply the change. Pass `--write` to let Gemini edit files directly via Gemini's `--yolo` mode.
+Hands a task to Antigravity through the `ask-antigravity:antigravity-rescue` subagent. Read-only by default — Antigravity analyzes and proposes; Claude or you apply the change. Pass `--write` to let Antigravity edit files directly.
 
-Use it to have Gemini:
+Use it to have Antigravity:
 
-- analyze a large diff or codebase region (Gemini's 1M-token context shines here)
+- analyze a large diff or codebase region (Antigravity's large context window shines here)
 - give a second opinion on an approach Claude proposed
 - investigate a bug or run an analysis pass
 
 ```bash
-/ask-gemini:rescue investigate why the build is failing in CI
-/ask-gemini:rescue --model pro analyze the entire src/ directory for race conditions
-/ask-gemini:rescue --write fix the failing test with the smallest safe patch
-/ask-gemini:rescue --background trace every caller of this function across the repo
+/ask-antigravity:rescue investigate why the build is failing in CI
+/ask-antigravity:rescue analyze the entire src/ directory for race conditions
+/ask-antigravity:rescue --write fix the failing test with the smallest safe patch
+/ask-antigravity:rescue --background trace every caller of this function across the repo
 ```
 
 Or just ask:
 
 ```text
-Ask Gemini to walk through the auth middleware and find anything that breaks under partial failure.
+Ask Antigravity to walk through the auth middleware and find anything that breaks under partial failure.
 ```
 
 **Notes:**
-- Read-only by default. Add `--write` to let Gemini edit.
-- Model aliases: `pro` → `gemini-2.5-pro`, `flash` → `gemini-2.5-flash`.
-- `--background` runs the rescue as a Claude Code background bash task; output appears in chat when Gemini finishes.
+- Read-only by default. Add `--write` to let Antigravity edit.
+- Defaults to the model selected in the agy TUI (`/model`). Pass `--model "<display name>"` (a name from `agy models`, e.g. `--model "Gemini 3.5 Flash (Low)"`) to override per call.
+- `--background` runs the rescue as a Claude Code background bash task; output appears in chat when Antigravity finishes.
 
-### `/ask-gemini:setup`
+### `/ask-antigravity:setup`
 
-Checks whether Gemini is installed and authenticated. If Gemini is missing and `npm` is available, it offers to install it.
+Checks whether Antigravity is installed and authenticated. If `agy` is missing, it prints the install command for you to run yourself (it does not auto-run a remote installer).
 
 ```bash
-/ask-gemini:setup
+/ask-antigravity:setup
 ```
 
 ## How it works
 
-The plugin invokes Gemini in non-interactive mode (`gemini --prompt "..."`) with a fixed approval mode:
+The plugin drives `agy` in non-interactive print mode (`-p`). The prompt body is written to a temporary workspace directory exposed to agy via `--add-dir`, and agy is told to read and act on it, keeping the prompt off the command line so it never hits argv length limits. Because agy narrates its tool-use steps before answering, the plugin asks agy to wrap the real response in marker lines and returns only that region.
 
-- **Read-only paths** (`/ask-gemini:review`, `/ask-gemini:adversarial-review`, `/ask-gemini:rescue` without `--write`) use `--approval-mode plan`, so the run cannot hang on an interactive approval prompt and Gemini cannot modify the workspace.
-- **Write path** (`/ask-gemini:rescue --write`) uses `--approval-mode yolo` (equivalent to `--yolo`). Gemini auto-approves all tools, including shell commands.
+agy **1.0.7 or later** is required: older versions hang in headless print mode (no output, no exit). `/ask-antigravity:setup` and every invocation path check the version and tell you to upgrade instead of hanging.
+
+- **Read-only paths** (`/ask-antigravity:review`, `/ask-antigravity:adversarial-review`, `/ask-antigravity:rescue` without `--write`) invoke agy without permission overrides, so the run cannot modify the workspace.
+- **Write path** (`/ask-antigravity:rescue --write`) passes `--dangerously-skip-permissions` so write tasks don't stall on a permission prompt; agy may then edit files and run tools.
 
 ### Model selection
 
-- **`/ask-gemini:review` and `/ask-gemini:adversarial-review`** default to **`gemini-3.1-pro-preview`**. Gemini CLI's "auto" routing can drop a long review prompt onto Flash, which produces noticeably shallower findings on the same input. Pinning reviews to the latest Pro preview keeps quality predictable. Override with `--model flash`, `--model pro` (which still resolves to `gemini-2.5-pro`), or any explicit model name.
-- **`/ask-gemini:rescue`** forces no default. It respects whatever model your Gemini CLI config picks, including auto. Pass `--model pro` (or `--model <name>`) per-call for explicit control.
+- All paths (`/ask-antigravity:review`, `/ask-antigravity:adversarial-review`, `/ask-antigravity:rescue`) default to the model currently selected in the agy TUI (`/model` picker). The plugin ships no hardcoded default.
+- Pass `--model "<display name>"` to override per call. Valid names come from `agy models` (e.g. `Gemini 3.5 Flash (Low)`, `Claude Sonnet 4.6 (Thinking)`); they are display names with spaces, so quote them.
 
-The plugin is **stateless** — no transcripts, no PID files, no session resume. Every invocation is a one-shot Gemini call. This matches Gemini CLI's actual non-interactive shape and keeps the plugin small.
+The plugin is **stateless** — no transcripts, no PID files, no session resume. Every invocation is a one-shot agy call. This matches agy's actual non-interactive shape and keeps the plugin small.
 
 ### Trust model for slash command arguments
 
-Claude Code interpolates slash command arguments (`$ARGUMENTS`) into a Bash command string before passing them to the companion script. This is the standard Claude Code idiom (codex-plugin-cc and other official plugins use the identical pattern). It means **your shell interprets shell metacharacters in slash args** — `/ask-gemini:rescue $(echo hi)` expands the command substitution before reaching the plugin. The threat model assumes you typed the slash command yourself; treat it with the care you'd apply to any command you run directly in your terminal.
+Claude Code interpolates slash command arguments (`$ARGUMENTS`) into a Bash command string before passing them to the companion script. This is the standard Claude Code idiom (codex-plugin-cc and other official plugins use the identical pattern). It means **your shell interprets shell metacharacters in slash args** — `/ask-antigravity:rescue $(echo hi)` expands the command substitution before reaching the plugin. The threat model assumes you typed the slash command yourself; treat it with the care you'd apply to any command you run directly in your terminal.
 
 ## What's not included (and why)
 
@@ -161,10 +165,10 @@ These pieces from codex-plugin-cc are deliberately left out of v1:
 
 | Codex feature | Why dropped |
 |---------------|-------------|
-| `/codex:status`, `/codex:result`, `/codex:cancel` | Gemini CLI has no app-server / job-control protocol. Claude Code's native `run_in_background: true` handles backgrounding. |
-| `--resume` / `--fresh` | Gemini's non-interactive mode has no session-resume RPC. The interactive REPL offers `/chat resume` for users who need it. |
+| `/codex:status`, `/codex:result`, `/codex:cancel` | agy has no app-server / job-control protocol. Claude Code's native `run_in_background: true` handles backgrounding. |
+| `--resume` / `--fresh` | agy's non-interactive mode has no session-resume RPC. The interactive TUI is available for users who need it. |
 | Stop-hook review gate | Footgun (cost, loops). May arrive in v1.x once the core flow is validated. |
-| JSON-schema review output | Gemini's plain-text mode makes JSON parsing brittle. Markdown sections degrade gracefully. |
+| JSON-schema review output | agy's plain-text print mode makes JSON parsing brittle. Markdown sections degrade gracefully. |
 
 For the full rationale, see `docs/plans/2026-04-26-gemini-plugin-cc-design.md`.
 
@@ -172,7 +176,7 @@ For the full rationale, see `docs/plans/2026-04-26-gemini-plugin-cc-design.md`.
 
 The plugin's *Claude Code packaging* (`commands/*.md` + `agents/*.md`) drives the slash-command UX and will not load in other agents. For everything else, this repo ships:
 
-- `skills/gemini-helper/SKILL.md` — Anthropic Skill format, discoverable by Codex CLI, OpenCode, Pi.dev, and Copilot CLI's skill loader
+- `skills/antigravity-helper/SKILL.md` — Anthropic Skill format, discoverable by Codex CLI, OpenCode, Pi.dev, and Copilot CLI's skill loader
 - `.plugin/plugin.json` — Copilot CLI's expected manifest at the repo root, pointing at the same `./skills/`
 
 You lose the slash-command UX in these agents, but the capability remains reachable as a model-invoked skill.
@@ -180,30 +184,31 @@ You lose the slash-command UX in these agents, but the capability remains reacha
 ### Copilot CLI
 
 ```bash
-copilot plugin install contrapuntal/gemini-plugin-cc
+copilot plugin install contrapuntal/antigravity-plugin-cc
 ```
 
-The plugin's `agents/gemini-rescue.md` also loads as a Copilot agent automatically.
+The plugin's `agents/antigravity-rescue.md` also loads as a Copilot agent automatically.
 
 ### Codex CLI, OpenCode, Pi.dev — symlink install
 
 ```bash
-# Set these once per shell (or in your shell rc).
-# GEMINI_PLUGIN_CC_ROOT lets the skill find the companion script.
-# GEMINI_CLI_TRUST_WORKSPACE keeps headless Gemini from refusing to run in untrusted dirs.
-export GEMINI_PLUGIN_CC_ROOT="$(pwd)"
-export GEMINI_CLI_TRUST_WORKSPACE=true
+# Set this once per shell (or in your shell rc).
+# ANTIGRAVITY_PLUGIN_CC_ROOT lets the skill find the companion script.
+export ANTIGRAVITY_PLUGIN_CC_ROOT="$(pwd)"
+
+# If agy hasn't been interactively trusted in your working dir, trust the
+# workspace in agy (it records trustedWorkspaces in its settings.json).
 
 # OpenCode
-ln -s "$GEMINI_PLUGIN_CC_ROOT/skills/gemini-helper" ~/.config/opencode/skills/gemini-helper
+ln -s "$ANTIGRAVITY_PLUGIN_CC_ROOT/skills/antigravity-helper" ~/.config/opencode/skills/antigravity-helper
 
 # Codex CLI
-ln -s "$GEMINI_PLUGIN_CC_ROOT/skills/gemini-helper" ~/.codex/skills/gemini-helper
+ln -s "$ANTIGRAVITY_PLUGIN_CC_ROOT/skills/antigravity-helper" ~/.codex/skills/antigravity-helper
 
 # Pi.dev (consult its package docs for the right skills directory; or distribute as an npm package)
 ```
 
-When invoking the host agent, prefer non-interactive modes that auto-approve shell commands (Pi: `--print`, OpenCode: `opencode run`, Codex CLI: `codex exec -s workspace-write`, Copilot CLI: `copilot --allow-all-tools -p "..."`). For Codex CLI with Gemini OAuth, also grant the sandbox network access and write access to Gemini's credential directory so headless OAuth-token rotation can complete:
+When invoking the host agent, prefer non-interactive modes that auto-approve shell commands (Pi: `--print`, OpenCode: `opencode run`, Codex CLI: `codex exec -s workspace-write`, Copilot CLI: `copilot --allow-all-tools -p "..."`). For Codex CLI with Antigravity OAuth, also grant the sandbox network access and write access to agy's credential directory so headless OAuth-token rotation can complete:
 
 ```bash
 codex exec -s workspace-write \
@@ -213,9 +218,9 @@ codex exec -s workspace-write \
   "your prompt"
 ```
 
-Without both, Codex's sandbox blocks Gemini's token refresh and the call falls back to interactive browser auth (which surfaces as `FatalCancellationError: Authentication cancelled by user`, misleadingly).
+(`~/.gemini/antigravity-cli/` is agy's real config directory — that path is intentional, not a leftover.) Without both, Codex's sandbox blocks agy's token refresh and the call falls back to interactive browser auth, which surfaces misleadingly as a user cancellation.
 
-Once linked, the agent's model loads the skill on demand based on its description. Prerequisites match Claude Code: `gemini` CLI installed and authenticated, `node` 18.18+ on PATH.
+Once linked, the agent's model loads the skill on demand based on its description. Prerequisites match Claude Code: `agy` CLI installed and authenticated, `node` 18.18+ on PATH.
 
 
 ## Testing
@@ -224,7 +229,13 @@ Once linked, the agent's model loads the skill on demand based on its descriptio
 npm test
 ```
 
-Runs unit tests against arg parsing, prompt assembly, git helpers, rendering, and process spawning. Tests never invoke the real `gemini` binary.
+Runs unit tests against arg parsing, prompt assembly, git helpers, rendering, process spawning, and an end-to-end companion run against a fake `agy` binary. Tests never invoke the real `agy`.
+
+```bash
+AGY_LIVE=1 node --test tests/live.test.mjs
+```
+
+Runs live smoke tests against the **real** agy (spends model calls; needs an installed, authenticated agy). Run this after every agy upgrade — it verifies the upstream behaviors the plugin's design depends on: headless `-p` answering without a TTY, print-mode `--model`, and marker-wrapped output extraction.
 
 ## License
 
